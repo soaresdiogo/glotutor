@@ -52,3 +52,13 @@ export class RateLimitExceededError extends AppError {
     this.name = 'RateLimitExceededError';
   }
 }
+
+export class TenantNotFoundError extends AppError {
+  constructor(
+    message: string = 'No tenant configured for this domain.',
+    messageKey?: string,
+  ) {
+    super(message, 503, 'TENANT_NOT_FOUND', messageKey);
+    this.name = 'TenantNotFoundError';
+  }
+}

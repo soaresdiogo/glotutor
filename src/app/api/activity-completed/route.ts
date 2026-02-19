@@ -5,16 +5,18 @@ import { makeCompleteActivityUseCase } from '@/features/activity-completion/appl
 import type { ActivityType } from '@/features/level-progress/domain/repositories/level-progress.repository.interface';
 import { apiErrorHandler } from '@/shared/lib/api-error-handler';
 import { UnauthorizedError } from '@/shared/lib/errors';
+import { getTenantFromRequest } from '@/shared/lib/require-tenant';
 
-const VALID_ACTIVITY_TYPES: ActivityType[] = [
+const VALID_ACTIVITY_TYPES = new Set<ActivityType>([
   'lesson',
   'podcast',
   'reading',
   'conversation',
-];
+]);
 
 export async function POST(req: NextRequest) {
   try {
+    await getTenantFromRequest(req);
     const user = await getUserLanguagesAuthUser(req);
     if (!user) {
       throw new UnauthorizedError(
@@ -28,7 +30,7 @@ export async function POST(req: NextRequest) {
       typeof body?.language === 'string' ? body.language.trim() : '';
     const cefrLevel =
       typeof body?.cefrLevel === 'string' ? body.cefrLevel.trim() : '';
-    const activityType = VALID_ACTIVITY_TYPES.includes(body?.activityType)
+    const activityType = VALID_ACTIVITY_TYPES.has(body?.activityType)
       ? body.activityType
       : undefined;
     const durationMinutes =

@@ -4,6 +4,7 @@ import { generatePodcastSchema } from '@/features/listening/application/dto/gene
 import { makeGeneratePodcastUseCase } from '@/features/listening/application/factories/generate-podcast.factory';
 import { apiErrorHandler } from '@/shared/lib/api-error-handler';
 import { UnauthorizedError } from '@/shared/lib/errors';
+import { getTenantFromRequest } from '@/shared/lib/require-tenant';
 
 import { getListeningAuthUser } from '../get-auth-user';
 
@@ -17,6 +18,7 @@ export const maxDuration = 120;
 
 export async function POST(req: NextRequest) {
   try {
+    await getTenantFromRequest(req);
     const user = await getListeningAuthUser(req);
     if (!user) {
       throw new UnauthorizedError(

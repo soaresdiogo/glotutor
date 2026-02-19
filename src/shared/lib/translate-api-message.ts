@@ -7,12 +7,13 @@ import { SUPPORTED_LOCALES } from '@/locales/types';
 const SUPPORTED_SET = new Set<string>(SUPPORTED_LOCALES);
 
 /**
- * Resolves Accept-Language header to a supported locale (e.g. "pt-BR" -> "pt", "en-US" -> "en").
+ * Resolves Accept-Language header value to a supported locale (e.g. "pt-BR,en;q=0.9" -> "pt").
  */
-export function getLocaleFromRequest(req: NextRequest): LocaleCode {
-  const accept = req.headers.get('Accept-Language');
-  if (!accept) return 'en';
-  const parts = accept
+export function getLocaleFromAcceptLanguage(
+  acceptLanguage: string | null,
+): LocaleCode {
+  if (!acceptLanguage) return 'en';
+  const parts = acceptLanguage
     .split(',')
     .map((s) => s.split(';')[0]?.trim().toLowerCase());
   for (const part of parts) {
@@ -20,6 +21,13 @@ export function getLocaleFromRequest(req: NextRequest): LocaleCode {
     if (code && SUPPORTED_SET.has(code)) return code as LocaleCode;
   }
   return 'en';
+}
+
+/**
+ * Resolves Accept-Language header to a supported locale (e.g. "pt-BR" -> "pt", "en-US" -> "en").
+ */
+export function getLocaleFromRequest(req: NextRequest): LocaleCode {
+  return getLocaleFromAcceptLanguage(req.headers.get('Accept-Language'));
 }
 
 /**

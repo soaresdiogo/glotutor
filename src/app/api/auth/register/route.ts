@@ -8,6 +8,7 @@ import { db } from '@/infrastructure/db/client';
 import { studentProfiles } from '@/infrastructure/db/schema/student-profiles';
 import { supportedLanguages } from '@/infrastructure/db/schema/supported-languages';
 import { apiErrorHandler } from '@/shared/lib/api-error-handler';
+import { getTenantFromRequest } from '@/shared/lib/require-tenant';
 import {
   getLocaleFromRequest,
   translateApiMessage,
@@ -15,6 +16,7 @@ import {
 
 export async function POST(req: NextRequest) {
   try {
+    await getTenantFromRequest(req);
     const dto = RegisterSchema.parse(await req.json());
     const registerUseCase = makeRegisterUseCase();
     const { userId, email } = await registerUseCase.execute(dto);

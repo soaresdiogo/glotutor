@@ -4,6 +4,7 @@ import { makeGetReadingTextDetailUseCase } from '@/features/reading/application/
 import { GetReadingTextDetailPresenter } from '@/features/reading/infrastructure/presenters/get-reading-text-detail.presenter';
 import { apiErrorHandler } from '@/shared/lib/api-error-handler';
 import { UnauthorizedError } from '@/shared/lib/errors';
+import { getTenantFromRequest } from '@/shared/lib/require-tenant';
 
 import { getReadingAuthUser } from '../../get-auth-user';
 
@@ -12,6 +13,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
+    await getTenantFromRequest(req);
     const user = await getReadingAuthUser(req);
     if (!user) {
       throw new UnauthorizedError(

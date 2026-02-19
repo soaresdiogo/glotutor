@@ -3,9 +3,11 @@ import { makeRefreshAuthTokenUseCase } from '@/features/auth/application/factori
 import { RefreshTokenPresenter } from '@/features/auth/infrastructure/presenters/refresh-token.presenter';
 import { apiErrorHandler } from '@/shared/lib/api-error-handler';
 import { UnauthorizedError } from '@/shared/lib/errors';
+import { getTenantFromRequest } from '@/shared/lib/require-tenant';
 
 export async function POST(req: NextRequest) {
   try {
+    await getTenantFromRequest(req);
     const refreshToken = req.cookies.get('refreshToken')?.value;
     if (!refreshToken) {
       return apiErrorHandler(

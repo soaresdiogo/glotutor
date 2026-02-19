@@ -5,11 +5,13 @@ import { makeGetLastSessionUseCase } from '@/features/reading/application/factor
 import { GetLastSessionPresenter } from '@/features/reading/infrastructure/presenters/get-last-session.presenter';
 import { apiErrorHandler } from '@/shared/lib/api-error-handler';
 import { BadRequestError, UnauthorizedError } from '@/shared/lib/errors';
+import { getTenantFromRequest } from '@/shared/lib/require-tenant';
 
 import { getReadingAuthUser } from '../get-auth-user';
 
 export async function GET(req: NextRequest) {
   try {
+    await getTenantFromRequest(req);
     const user = await getReadingAuthUser(req);
     if (!user) {
       throw new UnauthorizedError(

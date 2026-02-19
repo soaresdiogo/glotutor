@@ -10,6 +10,7 @@ import { supportedLanguages } from '@/infrastructure/db/schema/supported-languag
 import { texts } from '@/infrastructure/db/schema/texts';
 import { apiErrorHandler } from '@/shared/lib/api-error-handler';
 import { UnauthorizedError } from '@/shared/lib/errors';
+import { getTenantFromRequest } from '@/shared/lib/require-tenant';
 
 const LIMIT = 5;
 
@@ -25,6 +26,7 @@ export type SearchResponse = {
 
 export async function GET(req: NextRequest) {
   try {
+    await getTenantFromRequest(req);
     const user = await getReadingAuthUser(req);
     if (!user) {
       throw new UnauthorizedError(
