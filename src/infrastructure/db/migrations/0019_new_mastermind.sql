@@ -1,0 +1,2 @@
+ALTER TABLE "placement_test_questions" ADD COLUMN IF NOT EXISTS "question_pool" varchar(20) DEFAULT 'placement' NOT NULL;--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "ptq_pool_lang_level_idx" ON "placement_test_questions" USING btree ("question_pool","language","cefr_level");

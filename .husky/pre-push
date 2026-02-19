@@ -1,0 +1,7 @@
+#!/usr/bin/env sh
+echo "🔍 Running pre-push checks..."
+npm run check-types && \
+npm run check-cycles && \
+npm run validate-copy && \
+npm run test && \
+echo "✅ All checks passed!"

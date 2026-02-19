@@ -1,0 +1,1 @@
+ALTER TABLE "student_podcast_progress" ADD COLUMN "total_questions" integer;
