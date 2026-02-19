@@ -9,12 +9,14 @@ import {
   RateLimitExceededError,
   UnauthorizedError,
 } from '@/shared/lib/errors';
+import { getTenantFromRequest } from '@/shared/lib/require-tenant';
 import { checkSpeakingSessionRateLimit } from '@/shared/lib/speaking-rate-limit';
 
 import { getSpeakingAuthUser } from '../get-auth-user';
 
 export async function POST(req: NextRequest) {
   try {
+    await getTenantFromRequest(req);
     const user = await getSpeakingAuthUser(req);
     if (!user) {
       throw new UnauthorizedError(

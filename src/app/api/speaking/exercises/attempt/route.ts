@@ -5,11 +5,13 @@ import { makeSubmitExerciseAttemptUseCase } from '@/features/speaking/applicatio
 import { SpeakingAttemptPresenter } from '@/features/speaking/infrastructure/presenters/speaking-attempt.presenter';
 import { apiErrorHandler } from '@/shared/lib/api-error-handler';
 import { BadRequestError, UnauthorizedError } from '@/shared/lib/errors';
+import { getTenantFromRequest } from '@/shared/lib/require-tenant';
 
 import { getSpeakingAuthUser } from '../../get-auth-user';
 
 export async function POST(req: NextRequest) {
   try {
+    await getTenantFromRequest(req);
     const user = await getSpeakingAuthUser(req);
     if (!user) {
       throw new UnauthorizedError(

@@ -5,12 +5,14 @@ import { GetFeedbackPresenter } from '@/features/reading/infrastructure/presente
 import { apiErrorHandler } from '@/shared/lib/api-error-handler';
 import { RateLimitExceededError, UnauthorizedError } from '@/shared/lib/errors';
 import { checkRateLimit } from '@/shared/lib/reading/rate-limit';
+import { getTenantFromRequest } from '@/shared/lib/require-tenant';
 
 import { getReadingAuthUser } from '../get-auth-user';
 
 export async function POST(req: NextRequest) {
   const startTime = Date.now();
   try {
+    await getTenantFromRequest(req);
     const user = await getReadingAuthUser(req);
     if (!user) {
       throw new UnauthorizedError(

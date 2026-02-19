@@ -4,11 +4,13 @@ import { GetWordDetailsSchema } from '@/features/reading/application/dto/get-wor
 import { makeGetWordDetailsUseCase } from '@/features/reading/application/factories/get-word-details.factory';
 import { apiErrorHandler } from '@/shared/lib/api-error-handler';
 import { BadRequestError, UnauthorizedError } from '@/shared/lib/errors';
+import { getTenantFromRequest } from '@/shared/lib/require-tenant';
 
 import { getReadingAuthUser } from '../get-auth-user';
 
 export async function POST(req: NextRequest) {
   try {
+    await getTenantFromRequest(req);
     const user = await getReadingAuthUser(req);
     if (!user) {
       throw new UnauthorizedError(

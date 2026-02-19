@@ -2,6 +2,7 @@ import type { NextRequest } from 'next/server';
 import { makeVerifyEmailUseCase } from '@/features/auth/application/factories/verify-email.factory';
 import { apiErrorHandler } from '@/shared/lib/api-error-handler';
 import { BadRequestError } from '@/shared/lib/errors';
+import { getTenantFromRequest } from '@/shared/lib/require-tenant';
 import {
   getLocaleFromRequest,
   translateApiMessage,
@@ -9,6 +10,7 @@ import {
 
 export async function GET(req: NextRequest) {
   try {
+    await getTenantFromRequest(req);
     const token = req.nextUrl.searchParams.get('token');
     if (!token || typeof token !== 'string') {
       throw new BadRequestError(

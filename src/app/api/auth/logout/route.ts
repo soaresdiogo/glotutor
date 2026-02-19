@@ -1,12 +1,19 @@
 import { serialize } from 'cookie';
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
+import { apiErrorHandler } from '@/shared/lib/api-error-handler';
+import { getTenantFromRequest } from '@/shared/lib/require-tenant';
 import {
   getLocaleFromRequest,
   translateApiMessage,
 } from '@/shared/lib/translate-api-message';
 
 export async function POST(req: NextRequest) {
+  try {
+    await getTenantFromRequest(req);
+  } catch (error) {
+    return apiErrorHandler(error, req);
+  }
   const cookie = serialize('refreshToken', '', {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',

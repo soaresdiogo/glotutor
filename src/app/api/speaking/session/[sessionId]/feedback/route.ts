@@ -6,6 +6,7 @@ import { makeGetSpeakingFeedbackUseCase } from '@/features/speaking/application/
 import { SpeakingFeedbackPresenter } from '@/features/speaking/infrastructure/presenters/speaking-feedback.presenter';
 import { apiErrorHandler } from '@/shared/lib/api-error-handler';
 import { BadRequestError, UnauthorizedError } from '@/shared/lib/errors';
+import { getTenantFromRequest } from '@/shared/lib/require-tenant';
 
 import { getSpeakingAuthUser } from '../../../get-auth-user';
 
@@ -14,6 +15,7 @@ export async function POST(
   { params }: { params: Promise<{ sessionId: string }> },
 ) {
   try {
+    await getTenantFromRequest(req);
     const user = await getSpeakingAuthUser(req);
     if (!user) {
       throw new UnauthorizedError(
@@ -55,6 +57,7 @@ export async function GET(
   { params }: { params: Promise<{ sessionId: string }> },
 ) {
   try {
+    await getTenantFromRequest(req);
     const user = await getSpeakingAuthUser(req);
     if (!user) {
       throw new UnauthorizedError(

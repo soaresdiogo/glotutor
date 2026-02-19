@@ -6,6 +6,7 @@ import { studentProfiles } from '@/infrastructure/db/schema/student-profiles';
 import { supportedLanguages } from '@/infrastructure/db/schema/supported-languages';
 import { apiErrorHandler } from '@/shared/lib/api-error-handler';
 import { BadRequestError, UnauthorizedError } from '@/shared/lib/errors';
+import { getTenantFromRequest } from '@/shared/lib/require-tenant';
 
 export type StudentProfileResponse = {
   id: string;
@@ -38,6 +39,7 @@ const NATIVE_LANGUAGE_CODES = [
 
 export async function GET(req: NextRequest) {
   try {
+    await getTenantFromRequest(req);
     const user = await getReadingAuthUser(req);
     if (!user) {
       throw new UnauthorizedError(
@@ -102,6 +104,7 @@ export async function GET(req: NextRequest) {
 
 export async function PATCH(req: NextRequest) {
   try {
+    await getTenantFromRequest(req);
     const user = await getReadingAuthUser(req);
     if (!user) {
       throw new UnauthorizedError(

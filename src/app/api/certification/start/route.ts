@@ -5,9 +5,11 @@ import { makeStartCertificationExamUseCase } from '@/features/level-progress/app
 import { PlacementPresenter } from '@/features/placement-test/infrastructure/presenters/placement.presenter';
 import { apiErrorHandler } from '@/shared/lib/api-error-handler';
 import { UnauthorizedError } from '@/shared/lib/errors';
+import { getTenantFromRequest } from '@/shared/lib/require-tenant';
 
 export async function POST(req: NextRequest) {
   try {
+    await getTenantFromRequest(req);
     const user = await getLevelProgressAuthUser(req);
     if (!user) {
       throw new UnauthorizedError(

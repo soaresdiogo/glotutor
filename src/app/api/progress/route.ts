@@ -5,9 +5,11 @@ import { makeGetProgressUseCase } from '@/features/progress/application/factorie
 import { ProgressPresenter } from '@/features/progress/infrastructure/presenters/progress.presenter';
 import { apiErrorHandler } from '@/shared/lib/api-error-handler';
 import { UnauthorizedError } from '@/shared/lib/errors';
+import { getTenantFromRequest } from '@/shared/lib/require-tenant';
 
 export async function GET(req: NextRequest) {
   try {
+    await getTenantFromRequest(req);
     const user = await getReadingAuthUser(req);
     if (!user) {
       throw new UnauthorizedError(

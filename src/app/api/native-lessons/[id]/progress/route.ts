@@ -5,6 +5,7 @@ import { makeSaveLessonProgressUseCase } from '@/features/native-lessons/applica
 import { NativeLessonPresenter } from '@/features/native-lessons/infrastructure/presenters/native-lesson.presenter';
 import { apiErrorHandler } from '@/shared/lib/api-error-handler';
 import { UnauthorizedError } from '@/shared/lib/errors';
+import { getTenantFromRequest } from '@/shared/lib/require-tenant';
 
 import { getNativeLessonsAuthUser } from '../../get-auth-user';
 
@@ -13,6 +14,7 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
+    await getTenantFromRequest(req);
     const user = await getNativeLessonsAuthUser(req);
     if (!user) {
       throw new UnauthorizedError(
