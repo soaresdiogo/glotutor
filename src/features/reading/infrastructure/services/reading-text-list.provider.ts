@@ -9,6 +9,87 @@ import { db } from '@/infrastructure/db/client';
 import { studentProfiles } from '@/infrastructure/db/schema/student-profiles';
 import { redisGet, redisSet } from '@/shared/lib/reading/redis-client';
 
+const TEXT_LIST_COLUMNS = {
+  id: true,
+  title: true,
+  content: true,
+  category: true,
+  level: true,
+  cefrLevel: true,
+  wordCount: true,
+  estimatedMinutes: true,
+  languageId: true,
+} as const;
+
+const TEXT_LIST_WITH = { language: { columns: { code: true } } } as const;
+
+type TextRow = Awaited<
+  ReturnType<
+    typeof db.query.texts.findMany<{
+      columns: typeof TEXT_LIST_COLUMNS;
+      with: typeof TEXT_LIST_WITH;
+    }>
+  >
+>[number];
+
+async function fetchTexts(
+  languageIds: string[],
+  level: string,
+  withLevel: boolean,
+): Promise<TextRow[]> {
+  return db.query.texts.findMany({
+    where: (table, { and, eq, inArray }) =>
+      withLevel
+        ? and(
+            inArray(table.languageId, languageIds),
+            eq(table.level, level),
+            eq(table.isPublished, true),
+          )
+        : and(
+            inArray(table.languageId, languageIds),
+            eq(table.isPublished, true),
+          ),
+    columns: TEXT_LIST_COLUMNS,
+    with: TEXT_LIST_WITH,
+  });
+}
+
+async function fetchRowsForMatchingLanguages(
+  matchingLanguageIds: string[],
+  level: string,
+): Promise<TextRow[]> {
+  const withLevel = await fetchTexts(matchingLanguageIds, level, true);
+  if (withLevel.length > 0) return withLevel;
+  return fetchTexts(matchingLanguageIds, level, false);
+}
+
+async function fetchEnglishFallbackRows(
+  allLanguages: { id: string; code: string }[],
+  level: string,
+): Promise<TextRow[]> {
+  const enLanguageIds = allLanguages
+    .filter((l) => l.code.startsWith('en'))
+    .map((l) => l.id);
+  if (enLanguageIds.length === 0) return [];
+  const withLevel = await fetchTexts(enLanguageIds, level, true);
+  if (withLevel.length > 0) return withLevel;
+  return fetchTexts(enLanguageIds, level, false);
+}
+
+function mapRowsToEntities(rows: TextRow[]): ReadingTextListItemEntity[] {
+  return rows.map((r) => ({
+    id: r.id,
+    title: r.title,
+    content: r.content,
+    category: r.category,
+    level: r.level,
+    cefrLevel: r.cefrLevel,
+    wordCount: r.wordCount,
+    estimatedMinutes: r.estimatedMinutes,
+    languageCode: r.language?.code ?? 'en',
+  }));
+}
+
 export class ReadingTextListProvider implements IReadingTextListProvider {
   async getTextsForUser(userId: string): Promise<GetTextsForUserResult> {
     console.log('\n========================================');
@@ -81,114 +162,21 @@ export class ReadingTextListProvider implements IReadingTextListProvider {
     console.log('   - level:', level);
     console.log('   - isPublished: true');
 
-    let rows = await db.query.texts.findMany({
-      where: (table, { and, eq, inArray }) =>
-        and(
-          inArray(table.languageId, matchingLanguageIds),
-          eq(table.level, level),
-          eq(table.isPublished, true),
-        ),
-      columns: {
-        id: true,
-        title: true,
-        content: true,
-        category: true,
-        level: true,
-        cefrLevel: true,
-        wordCount: true,
-        estimatedMinutes: true,
-        languageId: true,
-      },
-      with: { language: { columns: { code: true } } },
-    });
-    console.log('📚 Query 1 result (with level filter):', rows.length, 'rows');
+    let rows = await fetchRowsForMatchingLanguages(matchingLanguageIds, level);
+    console.log('📚 Query result (with/without level):', rows.length, 'rows');
     if (rows.length > 0) {
       console.log('📄 First row:', JSON.stringify(rows[0], null, 2));
     }
 
-    if (rows.length === 0) {
-      console.log(
-        '⚠️  No rows found with level filter, trying without level...',
-      );
-      console.log('📋 Query filters:');
-      console.log('   - languageId IN:', matchingLanguageIds);
-      console.log('   - isPublished: true');
-
-      rows = await db.query.texts.findMany({
-        where: (table, { and, eq, inArray }) =>
-          and(
-            inArray(table.languageId, matchingLanguageIds),
-            eq(table.isPublished, true),
-          ),
-        columns: {
-          id: true,
-          title: true,
-          content: true,
-          category: true,
-          level: true,
-          cefrLevel: true,
-          wordCount: true,
-          estimatedMinutes: true,
-          languageId: true,
-        },
-        with: { language: { columns: { code: true } } },
-      });
-      console.log('📚 Query 2 result (no level filter):', rows.length, 'rows');
+    const shouldTryEnglishFallback = rows.length === 0 && codePrefix !== 'en';
+    if (shouldTryEnglishFallback) {
+      rows = await fetchEnglishFallbackRows(allLanguages, level);
+      console.log('📚 English fallback result:', rows.length, 'rows');
       if (rows.length > 0) {
         console.log('📄 First row:', JSON.stringify(rows[0], null, 2));
       }
     }
 
-    if (rows.length === 0 && codePrefix !== 'en') {
-      const enLanguageIds = allLanguages
-        .filter((l) => l.code.startsWith('en'))
-        .map((l) => l.id);
-      if (enLanguageIds.length > 0) {
-        rows = await db.query.texts.findMany({
-          where: (table, { and, eq, inArray }) =>
-            and(
-              inArray(table.languageId, enLanguageIds),
-              eq(table.level, level),
-              eq(table.isPublished, true),
-            ),
-          columns: {
-            id: true,
-            title: true,
-            content: true,
-            category: true,
-            level: true,
-            cefrLevel: true,
-            wordCount: true,
-            estimatedMinutes: true,
-            languageId: true,
-          },
-          with: { language: { columns: { code: true } } },
-        });
-        if (rows.length === 0) {
-          rows = await db.query.texts.findMany({
-            where: (table, { and, eq, inArray }) =>
-              and(
-                inArray(table.languageId, enLanguageIds),
-                eq(table.isPublished, true),
-              ),
-            columns: {
-              id: true,
-              title: true,
-              content: true,
-              category: true,
-              level: true,
-              cefrLevel: true,
-              wordCount: true,
-              estimatedMinutes: true,
-              languageId: true,
-            },
-            with: { language: { columns: { code: true } } },
-          });
-        }
-      }
-    }
-
-    // ADDITIONAL DEBUG: Try querying ALL published texts
     if (rows.length === 0) {
       console.log('⚠️  Still no rows, trying ALL published texts...');
       const allTexts = await db.query.texts.findMany({
@@ -207,22 +195,10 @@ export class ReadingTextListProvider implements IReadingTextListProvider {
       }
     }
 
-    const textsList: ReadingTextListItemEntity[] = rows.map((r) => ({
-      id: r.id,
-      title: r.title,
-      content: r.content,
-      category: r.category,
-      level: r.level,
-      cefrLevel: r.cefrLevel,
-      wordCount: r.wordCount,
-      estimatedMinutes: r.estimatedMinutes,
-      languageCode: r.language?.code ?? 'en',
-    }));
-
+    const textsList = mapRowsToEntities(rows);
     console.log('📦 Final textsList count:', textsList.length);
 
     const body = JSON.stringify({ texts: textsList });
-    // Only cache when we have texts; avoid caching empty array for 1 hour
     if (textsList.length > 0) {
       console.log('💾 Caching result...');
       await redisSet(cacheKey, body, 3600);

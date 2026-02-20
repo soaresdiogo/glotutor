@@ -5,6 +5,7 @@ export interface EmailService {
   sendMfaCodeEmail(to: string, code: string): Promise<void>;
   sendPasswordResetEmail(to: string, resetLink: string): Promise<void>;
   sendVerificationEmail(to: string, verifyLink: string): Promise<void>;
+  sendPaymentLinkEmail(to: string, paymentLink: string): Promise<void>;
 }
 
 /**
@@ -96,6 +97,29 @@ class ResendEmailService implements EmailService {
               <a href="${verifyLink}" style="display: inline-block; background: #0ea5e9; color: white; padding: 14px 32px; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 16px;">Verify my email</a>
             </div>
             <p style="font-size: 14px; color: #6b7280;">This link expires in 24 hours. If you didn't create an account, ignore this email.</p>
+          </div>
+        </body>
+      </html>
+    `;
+    await this.send(to, subject, html);
+  }
+
+  async sendPaymentLinkEmail(to: string, paymentLink: string): Promise<void> {
+    const subject = 'Complete your subscription';
+    const html = `
+      <!DOCTYPE html>
+      <html>
+        <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+        <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <div style="background: #fff; border-radius: 8px; padding: 32px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+            <h1 style="font-size: 24px; margin-bottom: 24px; color: #111;">Complete your signup</h1>
+            <p style="font-size: 16px; margin-bottom: 24px;">Click the button below to complete your subscription and payment. You will be redirected to our secure checkout.</p>
+            <div style="text-align: center; margin: 32px 0;">
+              <a href="${paymentLink}" style="display: inline-block; background: #0ea5e9; color: white; padding: 14px 32px; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 16px;">Continue to payment</a>
+            </div>
+            <p style="font-size: 14px; color: #6b7280;">This link expires in 1 hour. If you didn't request this, you can ignore this email.</p>
+            <p style="font-size: 14px; color: #6b7280; margin-top: 16px;">Or copy and paste this link into your browser:</p>
+            <p style="font-size: 12px; word-break: break-all; color: #6b7280;">${paymentLink}</p>
           </div>
         </body>
       </html>

@@ -19,31 +19,40 @@ const QUESTION_TYPES = [
   'listening',
 ] as const;
 
+async function seedPoolEntry(
+  pool: QuestionPool,
+  language: string,
+  level: string,
+  questionType: string,
+): Promise<void> {
+  const existing = await db.query.placementTestQuestions.findFirst({
+    where: and(
+      eq(placementTestQuestions.language, language),
+      eq(placementTestQuestions.cefrLevel, level),
+      eq(placementTestQuestions.questionType, questionType),
+      eq(placementTestQuestions.questionPool, pool),
+    ),
+  });
+  if (existing) return;
+
+  const prefix = pool === 'certification' ? 'Certification' : 'Placement';
+  await db.insert(placementTestQuestions).values({
+    language,
+    cefrLevel: level,
+    questionType,
+    questionPool: pool,
+    questionText: `${prefix} ${questionType.replace('_', ' ')} for ${language} ${level}. What is the correct answer?`,
+    audioUrl: null,
+    options: ['Option A', 'Option B', 'Option C', 'Option D'],
+    correctOptionIndex: 0,
+  });
+}
+
 async function seedPool(pool: QuestionPool, label: string) {
   for (const language of LANGUAGES) {
     for (const level of LEVELS) {
       for (const questionType of QUESTION_TYPES) {
-        const existing = await db.query.placementTestQuestions.findFirst({
-          where: and(
-            eq(placementTestQuestions.language, language),
-            eq(placementTestQuestions.cefrLevel, level),
-            eq(placementTestQuestions.questionType, questionType),
-            eq(placementTestQuestions.questionPool, pool),
-          ),
-        });
-        if (existing) continue;
-
-        const prefix = pool === 'certification' ? 'Certification' : 'Placement';
-        await db.insert(placementTestQuestions).values({
-          language,
-          cefrLevel: level,
-          questionType,
-          questionPool: pool,
-          questionText: `${prefix} ${questionType.replace('_', ' ')} for ${language} ${level}. What is the correct answer?`,
-          audioUrl: questionType === 'listening' ? null : null,
-          options: ['Option A', 'Option B', 'Option C', 'Option D'],
-          correctOptionIndex: 0,
-        });
+        await seedPoolEntry(pool, language, level, questionType);
       }
     }
   }

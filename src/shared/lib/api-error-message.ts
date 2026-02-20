@@ -13,6 +13,19 @@ function isGenericServerError(status: number, message: string): boolean {
   );
 }
 
+function getMessageFromNonResponse(
+  err: unknown,
+  byStatus: Partial<Record<number, string>>,
+): string {
+  const msg = err instanceof Error ? err.message : String(err);
+  const isTechnical = /status code|Internal Server Error|Failed to fetch/i.test(
+    msg,
+  );
+  const defaultServer = byStatus[500] ?? DEFAULT_MESSAGES[500];
+  if (isTechnical || msg.length >= 200) return defaultServer;
+  return msg || defaultServer;
+}
+
 /**
  * Returns a user-friendly message from an API error. Prefers the API response
  * body `message` when present; otherwise uses fallbacks by status code so users
@@ -38,11 +51,5 @@ export async function getApiErrorMessage(
     if (statusMsg) return statusMsg;
   }
 
-  const msg = err instanceof Error ? err.message : String(err);
-  const isTechnical = /status code|Internal Server Error|Failed to fetch/i.test(
-    msg,
-  );
-  if (isTechnical || msg.length >= 200)
-    return byStatus[500] ?? DEFAULT_MESSAGES[500];
-  return msg || (byStatus[500] ?? DEFAULT_MESSAGES[500]);
+  return getMessageFromNonResponse(err, byStatus);
 }

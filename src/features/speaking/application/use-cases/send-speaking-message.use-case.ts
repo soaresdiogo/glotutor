@@ -101,6 +101,33 @@ export class SendSpeakingMessageUseCase {
     private readonly usageRepo: ISpeakingSessionUsageRepository,
   ) {}
 
+  private async getSessionAndTopic(input: SendSpeakingMessageInput) {
+    const session = await this.sessionRepo.findById(input.sessionId);
+    if (!session) {
+      throw new NotFoundError(
+        'Speaking session not found.',
+        'speaking.sessionNotFound',
+      );
+    }
+    if (session.userId !== input.userId) {
+      throw new NotFoundError(
+        'Speaking session not found.',
+        'speaking.sessionNotFound',
+      );
+    }
+    if (session.status !== 'in_progress') {
+      throw new NotFoundError(
+        'Session is not active.',
+        'speaking.sessionNotActive',
+      );
+    }
+    const topic = await this.topicRepo.findById(session.topicId);
+    if (!topic) {
+      throw new NotFoundError('Topic not found.', 'speaking.topicNotFound');
+    }
+    return { session, topic };
+  }
+
   private async persistUsageAndLog(
     sessionId: string,
     userId: string,
@@ -142,157 +169,114 @@ export class SendSpeakingMessageUseCase {
     }
   }
 
-  async execute(
-    input: SendSpeakingMessageInput,
-  ): Promise<SendSpeakingMessageResult> {
-    const session = await this.sessionRepo.findById(input.sessionId);
-    if (!session) {
-      throw new NotFoundError(
-        'Speaking session not found.',
-        'speaking.sessionNotFound',
-      );
-    }
-    if (session.userId !== input.userId) {
-      throw new NotFoundError(
-        'Speaking session not found.',
-        'speaking.sessionNotFound',
-      );
-    }
-    if (session.status !== 'in_progress') {
-      throw new NotFoundError(
-        'Session is not active.',
-        'speaking.sessionNotActive',
-      );
-    }
-
-    const elapsed = Date.now() - session.startedAt.getTime();
-    const maxDurationMs = session.durationSeconds * 1000;
-    const isExpired = elapsed > maxDurationMs;
-
-    const topic = await this.topicRepo.findById(session.topicId);
-    if (!topic) {
-      throw new NotFoundError('Topic not found.', 'speaking.topicNotFound');
-    }
-
+  private resolveTtsLanguage(topic: { languageCode?: string | null }): string {
     const targetLanguage = topic.languageCode ?? 'en';
-    const ttsLanguage =
-      !targetLanguage || targetLanguage.startsWith('en')
-        ? 'en-US'
-        : targetLanguage;
+    return !targetLanguage || targetLanguage.startsWith('en')
+      ? 'en-US'
+      : targetLanguage;
+  }
 
-    const maxTurns = getMaxTurnsForCefrLevel(topic.cefrLevel);
-    const context = await this.contextStore.get(input.sessionId);
+  private async returnGoodbyeMaxTurns(
+    input: SendSpeakingMessageInput,
+    session: SpeakingSessionEntity,
+    ttsLanguage: string,
+    turnCount: number,
+    maxTurns: number,
+  ): Promise<SendSpeakingMessageResult> {
+    await this.persistUsageAndLog(input.sessionId, input.userId, session);
+    const goodbyeText =
+      "We've had a great conversation! Let's wrap up and review your feedback.";
+    const goodbyeAudio = await this.ttsGateway.synthesize(
+      goodbyeText,
+      ttsLanguage,
+    );
+    return {
+      studentText: '',
+      tutorText: goodbyeText,
+      tutorAudio: Buffer.from(goodbyeAudio).toString('base64'),
+      isSessionExpired: true,
+      turnInfo: { current: turnCount, max: maxTurns },
+    };
+  }
 
-    if (!input.isStart && context && context.turnCount >= maxTurns) {
-      await this.persistUsageAndLog(input.sessionId, input.userId, session);
-      const goodbyeText =
-        "We've had a great conversation! Let's wrap up and review your feedback.";
-      const goodbyeAudio = await this.ttsGateway.synthesize(
-        goodbyeText,
-        ttsLanguage,
-      );
-      return {
-        studentText: '',
-        tutorText: goodbyeText,
-        tutorAudio: Buffer.from(goodbyeAudio).toString('base64'),
-        isSessionExpired: true,
-        turnInfo: { current: context.turnCount, max: maxTurns },
-      };
-    }
+  private async returnGoodbyeExpired(
+    input: SendSpeakingMessageInput,
+    session: SpeakingSessionEntity,
+    ttsLanguage: string,
+    turnCount: number,
+    maxTurns: number,
+  ): Promise<SendSpeakingMessageResult> {
+    await this.persistUsageAndLog(input.sessionId, input.userId, session);
+    const goodbyeText =
+      "Time's up for today! You did great. We'll review your conversation and give you feedback in a moment.";
+    const goodbyeAudio = await this.ttsGateway.synthesize(
+      goodbyeText,
+      ttsLanguage,
+    );
+    return {
+      studentText: '',
+      tutorText: goodbyeText,
+      tutorAudio: Buffer.from(goodbyeAudio).toString('base64'),
+      isSessionExpired: true,
+      turnInfo: { current: turnCount, max: maxTurns },
+    };
+  }
 
-    const profile = await this.profileProvider.getProfile(input.userId);
-    const nativeLanguage = profile?.nativeLanguageCode ?? 'en';
-    const systemPrompt = buildSpeakingSystemPrompt({
-      targetLanguage,
-      nativeLanguage,
-      cefrLevel: topic.cefrLevel,
-      topicTitle: topic.title,
-      contextPrompt: topic.contextPrompt,
-      keyVocabulary: topic.keyVocabulary,
-      nativeExpressions: topic.nativeExpressions,
-    });
+  private buildCorrectionPayload(
+    structured: TutorResponseStructured | undefined,
+  ): {
+    correction?: { correction: string; explanation: string };
+  } {
+    if (!structured?.correction) return {};
+    return {
+      correction: {
+        correction: structured.correction,
+        explanation: structured.explanation ?? '',
+      },
+    };
+  }
 
-    if (isExpired) {
-      await this.persistUsageAndLog(input.sessionId, input.userId, session);
-      const goodbyeText =
-        "Time's up for today! You did great. We'll review your conversation and give you feedback in a moment.";
-      const goodbyeAudio = await this.ttsGateway.synthesize(
-        goodbyeText,
-        ttsLanguage,
-      );
-      return {
-        studentText: '',
-        tutorText: goodbyeText,
-        tutorAudio: Buffer.from(goodbyeAudio).toString('base64'),
-        isSessionExpired: true,
-        turnInfo: { current: context?.turnCount ?? 0, max: maxTurns },
-      };
-    }
-
-    if (input.isStart) {
-      const greetingMessages = [
-        { role: 'system' as const, content: systemPrompt },
-        {
-          role: 'user' as const,
-          content:
-            "[SESSION_START] The student just joined the class. Greet them and introduce today's topic.",
-        },
-      ];
-      const greetingResult = await this.chatGateway.chat(greetingMessages);
-      if (greetingResult.usage) {
-        await this.usageStore.increment(
-          input.sessionId,
-          greetingResult.usage.inputTokens,
-          greetingResult.usage.outputTokens,
-          CONTEXT_TTL_SECONDS,
-          { addTurn: false },
-        );
-      }
-      const { tutorText: greetingText } = parseTutorResponse(
-        greetingResult.content,
-      );
-      const tutorAudio = await this.ttsGateway.synthesize(
-        greetingText,
-        ttsLanguage,
-      );
-      return {
-        studentText: '',
-        tutorText: greetingText,
-        tutorAudio: Buffer.from(tutorAudio).toString('base64'),
-        isSessionExpired: false,
-        turnInfo: { current: 0, max: maxTurns },
-      };
-    }
-
-    if (!input.audioBuffer || !input.mimeType) {
-      throw new Error('Audio is required for non-start message.');
-    }
-
+  private async sendUserMessageAndReturnResult(opts: {
+    input: SendSpeakingMessageInput;
+    topic: { languageCode?: string | null };
+    context: Awaited<ReturnType<IConversationContextStore['get']>>;
+    systemPrompt: string;
+    ttsLanguage: string;
+    maxTurns: number;
+    audioBuffer: Buffer;
+    mimeType: string;
+  }): Promise<SendSpeakingMessageResult> {
+    const {
+      input,
+      topic,
+      context,
+      systemPrompt,
+      ttsLanguage,
+      maxTurns,
+      audioBuffer,
+      mimeType,
+    } = opts;
+    const targetLanguage = topic.languageCode ?? 'en';
     const studentText = await this.sttGateway.transcribe(
-      input.audioBuffer,
-      input.mimeType,
+      audioBuffer,
+      mimeType,
       targetLanguage,
     );
-
     const contextMessages = (context?.messages ?? []).map((m) => ({
-      role: m.role as 'user' | 'assistant',
+      role: m.role,
       content: m.content,
     }));
-    const summary = context?.summary
-      ? `Previous context: ${context.summary}\n\n`
+    const summaryPart = context?.summary
+      ? `\n\nPrevious context: ${context.summary}\n\n`
       : '';
     const messages: Array<{
       role: 'user' | 'assistant' | 'system';
       content: string;
     }> = [
-      {
-        role: 'system',
-        content: systemPrompt + (summary ? `\n\n${summary}` : ''),
-      },
+      { role: 'system', content: systemPrompt + summaryPart },
       ...contextMessages,
       { role: 'user', content: studentText || '(no speech recognized)' },
     ];
-
     const chatResult = await this.chatGateway.chat(messages);
     if (chatResult.usage) {
       await this.usageStore.increment(
@@ -304,7 +288,6 @@ export class SendSpeakingMessageUseCase {
     }
     const { tutorText, structured } = parseTutorResponse(chatResult.content);
     const tutorAudio = await this.ttsGateway.synthesize(tutorText, ttsLanguage);
-
     await this.contextStore.appendAndTrim(
       input.sessionId,
       studentText || '(no speech recognized)',
@@ -312,7 +295,6 @@ export class SendSpeakingMessageUseCase {
       CONTEXT_TTL_SECONDS,
       { structured },
     );
-
     const newTurnCount = (context?.turnCount ?? 0) + 1;
     return {
       studentText,
@@ -320,14 +302,111 @@ export class SendSpeakingMessageUseCase {
       tutorAudio: Buffer.from(tutorAudio).toString('base64'),
       isSessionExpired: false,
       turnInfo: { current: newTurnCount, max: maxTurns },
-      ...(structured?.correction
-        ? {
-            correction: {
-              correction: structured.correction,
-              explanation: structured.explanation ?? '',
-            },
-          }
-        : {}),
+      ...this.buildCorrectionPayload(structured),
     };
+  }
+
+  private async returnGreeting(
+    input: SendSpeakingMessageInput,
+    systemPrompt: string,
+    ttsLanguage: string,
+    maxTurns: number,
+  ): Promise<SendSpeakingMessageResult> {
+    const greetingMessages = [
+      { role: 'system' as const, content: systemPrompt },
+      {
+        role: 'user' as const,
+        content:
+          "[SESSION_START] The student just joined the class. Greet them and introduce today's topic.",
+      },
+    ];
+    const greetingResult = await this.chatGateway.chat(greetingMessages);
+    if (greetingResult.usage) {
+      await this.usageStore.increment(
+        input.sessionId,
+        greetingResult.usage.inputTokens,
+        greetingResult.usage.outputTokens,
+        CONTEXT_TTL_SECONDS,
+        { addTurn: false },
+      );
+    }
+    const { tutorText: greetingText } = parseTutorResponse(
+      greetingResult.content,
+    );
+    const tutorAudio = await this.ttsGateway.synthesize(
+      greetingText,
+      ttsLanguage,
+    );
+    return {
+      studentText: '',
+      tutorText: greetingText,
+      tutorAudio: Buffer.from(tutorAudio).toString('base64'),
+      isSessionExpired: false,
+      turnInfo: { current: 0, max: maxTurns },
+    };
+  }
+
+  async execute(
+    input: SendSpeakingMessageInput,
+  ): Promise<SendSpeakingMessageResult> {
+    const { session, topic } = await this.getSessionAndTopic(input);
+    const elapsed = Date.now() - session.startedAt.getTime();
+    const maxDurationMs = session.durationSeconds * 1000;
+    const isExpired = elapsed > maxDurationMs;
+    const ttsLanguage = this.resolveTtsLanguage(topic);
+    const maxTurns = getMaxTurnsForCefrLevel(topic.cefrLevel);
+    const context = await this.contextStore.get(input.sessionId);
+
+    if (!input.isStart && context != null && context.turnCount >= maxTurns) {
+      return this.returnGoodbyeMaxTurns(
+        input,
+        session,
+        ttsLanguage,
+        context.turnCount,
+        maxTurns,
+      );
+    }
+
+    const profile = await this.profileProvider.getProfile(input.userId);
+    const nativeLanguage = profile?.nativeLanguageCode ?? 'en';
+    const systemPrompt = buildSpeakingSystemPrompt({
+      targetLanguage: topic.languageCode ?? 'en',
+      nativeLanguage,
+      cefrLevel: topic.cefrLevel,
+      topicTitle: topic.title,
+      contextPrompt: topic.contextPrompt,
+      keyVocabulary: topic.keyVocabulary,
+      nativeExpressions: topic.nativeExpressions,
+    });
+
+    if (isExpired) {
+      return this.returnGoodbyeExpired(
+        input,
+        session,
+        ttsLanguage,
+        context?.turnCount ?? 0,
+        maxTurns,
+      );
+    }
+
+    if (input.isStart) {
+      return this.returnGreeting(input, systemPrompt, ttsLanguage, maxTurns);
+    }
+
+    const { audioBuffer, mimeType } = input;
+    if (!audioBuffer || !mimeType) {
+      throw new Error('Audio is required for non-start message.');
+    }
+
+    return this.sendUserMessageAndReturnResult({
+      input,
+      topic,
+      context,
+      systemPrompt,
+      ttsLanguage,
+      maxTurns,
+      audioBuffer,
+      mimeType,
+    });
   }
 }

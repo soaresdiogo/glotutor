@@ -53,6 +53,36 @@ function mapErrorType(
   return raw === 'Omission' ? 'Omission' : 'Mispronunciation';
 }
 
+function isAlreadyWav(audioBuffer: Buffer, mimeType: string): boolean {
+  return (
+    mimeType.includes('wav') &&
+    audioBuffer.length >= 44 &&
+    audioBuffer[0] === 0x52 &&
+    audioBuffer[1] === 0x49
+  );
+}
+
+async function ensureWavBuffer(
+  audioBuffer: Buffer,
+  mimeType: string,
+): Promise<Buffer> {
+  if (isAlreadyWav(audioBuffer, mimeType)) return audioBuffer;
+  return convertToWav(audioBuffer, mimeType);
+}
+
+function shouldUseChunkedPath(wavBuffer: Buffer): boolean {
+  return (
+    isWav(wavBuffer) &&
+    (getWavDurationSeconds(wavBuffer) ?? 0) > AZURE_CHUNK_THRESHOLD_SEC
+  );
+}
+
+function logReadingDebug(message: string): void {
+  if (process.env.DEBUG_READING_TRANSCRIPT === '1') {
+    console.info(message);
+  }
+}
+
 /**
  * Azure Speech pronunciation assessment service.
  * Implements both IPronunciationAssessmentService and ITranscriptionService
@@ -156,6 +186,74 @@ export class AzureSpeechPronunciationService
     }
   }
 
+  /**
+   * Runs assessment by splitting audio into chunks and merging results.
+   * Used when audio exceeds Azure's ~25s limit per request.
+   */
+  private async assessPronunciationChunked(
+    wavBuffer: Buffer,
+    languageCode: string,
+    expectedWords: string[],
+  ): Promise<PronunciationAssessmentResult | null> {
+    const wavChunks = splitWavIntoChunks(
+      wavBuffer,
+      AZURE_CHUNK_DURATION_SEC,
+      AZURE_CHUNK_THRESHOLD_SEC,
+    );
+    if (!wavChunks || wavChunks.length <= 1) return null;
+
+    const wordsPerChunk = Math.ceil(expectedWords.length / wavChunks.length);
+    const chunkResults: PronunciationAssessmentResult[] = [];
+    for (let i = 0; i < wavChunks.length; i++) {
+      const start = i * wordsPerChunk;
+      const end = Math.min(start + wordsPerChunk, expectedWords.length);
+      const refChunk = expectedWords.slice(start, end).join(' ');
+      const result = await this.assessChunk(
+        wavChunks[i],
+        refChunk,
+        languageCode,
+      );
+      chunkResults.push(result);
+    }
+
+    const mergedWords: PronunciationAssessmentWord[] = [];
+    for (const r of chunkResults) {
+      mergedWords.push(...r.words);
+    }
+    while (mergedWords.length < expectedWords.length) {
+      mergedWords.push({
+        word: '',
+        accuracyScore: 0,
+        errorType: 'Omission',
+        offset: 0,
+        duration: 0,
+      });
+    }
+    const words = mergedWords.slice(0, expectedWords.length);
+
+    let totalDuration = 0;
+    let sumAccuracy = 0;
+    let sumPronunciation = 0;
+    let sumFluency = 0;
+    let sumCompleteness = 0;
+    for (const r of chunkResults) {
+      totalDuration += r.durationSeconds;
+      sumAccuracy += r.accuracyScore;
+      sumPronunciation += r.pronunciationScore;
+      sumFluency += r.fluencyScore;
+      sumCompleteness += r.completenessScore;
+    }
+    const n = chunkResults.length;
+    return {
+      words,
+      pronunciationScore: sumPronunciation / n,
+      accuracyScore: sumAccuracy / n,
+      fluencyScore: sumFluency / n,
+      completenessScore: sumCompleteness / n,
+      durationSeconds: totalDuration,
+    };
+  }
+
   async assessPronunciation(
     audioBuffer: Buffer,
     mimeType: string,
@@ -164,93 +262,26 @@ export class AzureSpeechPronunciationService
   ): Promise<PronunciationAssessmentResult> {
     const overallStart = Date.now();
     const wavConversionStart = Date.now();
-    const wavBuffer =
-      mimeType.includes('wav') &&
-      audioBuffer.length >= 44 &&
-      audioBuffer[0] === 0x52 &&
-      audioBuffer[1] === 0x49
-        ? audioBuffer
-        : await convertToWav(audioBuffer, mimeType);
+    const wavBuffer = await ensureWavBuffer(audioBuffer, mimeType);
     const wavConversionDuration = Date.now() - wavConversionStart;
-
-    if (process.env.DEBUG_READING_TRANSCRIPT === '1') {
-      console.info(
-        `[Reading][Azure] WAV ready in ${wavConversionDuration}ms (mime=${mimeType}, bytes=${audioBuffer.length}, wavBytes=${wavBuffer.length})`,
-      );
-    }
+    logReadingDebug(
+      `[Reading][Azure] WAV ready in ${wavConversionDuration}ms (mime=${mimeType}, bytes=${audioBuffer.length}, wavBytes=${wavBuffer.length})`,
+    );
 
     const expectedWords = referenceText.trim().split(/\s+/).filter(Boolean);
 
-    if (
-      isWav(wavBuffer) &&
-      (getWavDurationSeconds(wavBuffer) ?? 0) > AZURE_CHUNK_THRESHOLD_SEC
-    ) {
-      const wavChunks = splitWavIntoChunks(
+    if (shouldUseChunkedPath(wavBuffer)) {
+      const chunkedResult = await this.assessPronunciationChunked(
         wavBuffer,
-        AZURE_CHUNK_DURATION_SEC,
-        AZURE_CHUNK_THRESHOLD_SEC,
+        languageCode,
+        expectedWords,
       );
-      if (wavChunks && wavChunks.length > 1) {
-        const wordsPerChunk = Math.ceil(
-          expectedWords.length / wavChunks.length,
-        );
-        const chunkResults: PronunciationAssessmentResult[] = [];
-        for (let i = 0; i < wavChunks.length; i++) {
-          const start = i * wordsPerChunk;
-          const end = Math.min(start + wordsPerChunk, expectedWords.length);
-          const refChunk = expectedWords.slice(start, end).join(' ');
-          const result = await this.assessChunk(
-            wavChunks[i],
-            refChunk,
-            languageCode,
-          );
-          chunkResults.push(result);
-        }
-
-        const mergedWords: PronunciationAssessmentWord[] = [];
-        for (const r of chunkResults) {
-          mergedWords.push(...r.words);
-        }
-        while (mergedWords.length < expectedWords.length) {
-          mergedWords.push({
-            word: '',
-            accuracyScore: 0,
-            errorType: 'Omission',
-            offset: 0,
-            duration: 0,
-          });
-        }
-        const words = mergedWords.slice(0, expectedWords.length);
-
-        let totalDuration = 0;
-        let sumAccuracy = 0;
-        let sumPronunciation = 0;
-        let sumFluency = 0;
-        let sumCompleteness = 0;
-        for (const r of chunkResults) {
-          totalDuration += r.durationSeconds;
-          sumAccuracy += r.accuracyScore;
-          sumPronunciation += r.pronunciationScore;
-          sumFluency += r.fluencyScore;
-          sumCompleteness += r.completenessScore;
-        }
-        const n = chunkResults.length;
-
+      if (chunkedResult) {
         const finalDuration = Date.now() - overallStart;
-        if (process.env.DEBUG_READING_TRANSCRIPT === '1') {
-          console.info(
-            `[Reading][Azure] assessPronunciation chunked ${wavChunks.length} chunks, total ${finalDuration}ms (durationSeconds=${totalDuration}, words=${words.length})`,
-          );
-        }
-
-        return {
-          words,
-          pronunciationScore: sumPronunciation / n,
-          accuracyScore: sumAccuracy / n,
-          fluencyScore: sumFluency / n,
-          completenessScore: sumCompleteness / n,
-          durationSeconds: totalDuration,
-        };
+        logReadingDebug(
+          `[Reading][Azure] assessPronunciation chunked, total ${finalDuration}ms (durationSeconds=${chunkedResult.durationSeconds}, words=${chunkedResult.words.length})`,
+        );
+        return chunkedResult;
       }
     }
 
@@ -259,12 +290,9 @@ export class AzureSpeechPronunciationService
       referenceText,
       languageCode,
     );
-    const finalDuration = Date.now() - overallStart;
-    if (process.env.DEBUG_READING_TRANSCRIPT === '1') {
-      console.info(
-        `[Reading][Azure] assessPronunciation total ${finalDuration}ms (durationSeconds=${result.durationSeconds}, words=${result.words.length})`,
-      );
-    }
+    logReadingDebug(
+      `[Reading][Azure] assessPronunciation total ${Date.now() - overallStart}ms (durationSeconds=${result.durationSeconds}, words=${result.words.length})`,
+    );
     return result;
   }
 

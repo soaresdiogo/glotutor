@@ -7,6 +7,47 @@ import { getTenantFromRequest } from '@/shared/lib/require-tenant';
 
 import { getSpeakingAuthUser } from '../get-auth-user';
 
+type ParsedPayload = {
+  sessionId: string;
+  isStart: boolean;
+  audioBuffer: Buffer | undefined;
+  mimeType: string | undefined;
+};
+
+async function parseMessagePayload(req: NextRequest): Promise<ParsedPayload> {
+  const contentType = req.headers.get('content-type') ?? '';
+  const result: ParsedPayload = {
+    sessionId: '',
+    isStart: false,
+    audioBuffer: undefined,
+    mimeType: undefined,
+  };
+
+  if (contentType.includes('multipart/form-data')) {
+    const formData = await req.formData();
+    const sid = formData.get('sessionId');
+    result.sessionId = typeof sid === 'string' ? sid : '';
+    const audio = formData.get('audio');
+    if (audio instanceof File) {
+      result.audioBuffer = Buffer.from(await audio.arrayBuffer());
+      result.mimeType = audio.type || 'audio/webm';
+    }
+    return result;
+  }
+
+  const body = await req.json();
+  result.sessionId = typeof body?.sessionId === 'string' ? body.sessionId : '';
+  result.isStart = Boolean(body?.isStart);
+  return result;
+}
+
+function jsonResponse(body: unknown, status: number) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { 'Content-Type': 'application/json' },
+  });
+}
+
 export async function POST(req: NextRequest) {
   try {
     await getTenantFromRequest(req);
@@ -18,55 +59,29 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const contentType = req.headers.get('content-type') ?? '';
-    let sessionId: string;
-    let isStart = false;
-    let audioBuffer: Buffer | undefined;
-    let mimeType: string | undefined;
+    const payload = await parseMessagePayload(req);
 
-    if (contentType.includes('multipart/form-data')) {
-      const formData = await req.formData();
-      const sid = formData.get('sessionId');
-      sessionId = typeof sid === 'string' ? sid : '';
-      const audio = formData.get('audio');
-      if (audio instanceof File) {
-        const ab = await audio.arrayBuffer();
-        audioBuffer = Buffer.from(ab);
-        mimeType = audio.type || 'audio/webm';
-      }
-    } else {
-      const body = await req.json();
-      sessionId = typeof body?.sessionId === 'string' ? body.sessionId : '';
-      isStart = Boolean(body?.isStart);
+    if (!payload.sessionId) {
+      return jsonResponse({ error: 'sessionId is required' }, 400);
     }
 
-    if (!sessionId) {
-      return new Response(JSON.stringify({ error: 'sessionId is required' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' },
-      });
-    }
-
-    if (!isStart && (!audioBuffer || !mimeType)) {
-      return new Response(
-        JSON.stringify({ error: 'audio is required when isStart is not true' }),
-        { status: 400, headers: { 'Content-Type': 'application/json' } },
+    if (!payload.isStart && (!payload.audioBuffer || !payload.mimeType)) {
+      return jsonResponse(
+        { error: 'audio is required when isStart is not true' },
+        400,
       );
     }
 
     const useCase = makeSendSpeakingMessageUseCase();
     const result = await useCase.execute({
       userId: user.id,
-      sessionId,
-      isStart: isStart || false,
-      audioBuffer,
-      mimeType,
+      sessionId: payload.sessionId,
+      isStart: payload.isStart,
+      audioBuffer: payload.audioBuffer,
+      mimeType: payload.mimeType,
     });
 
-    return new Response(JSON.stringify(result), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return jsonResponse(result, 200);
   } catch (error) {
     return apiErrorHandler(error, req);
   }

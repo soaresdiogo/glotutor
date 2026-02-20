@@ -37,6 +37,31 @@ function getExpectedWords(content: string): string[] {
   return content.trim().split(/\s+/).filter(Boolean);
 }
 
+function countStatuses(wordScores: Array<{ status: string }>): {
+  greenCount: number;
+  yellowCount: number;
+  redCount: number;
+  missedCount: number;
+} {
+  let greenCount = 0;
+  let yellowCount = 0;
+  let redCount = 0;
+  let missedCount = 0;
+  for (const w of wordScores) {
+    if (w.status === 'green') greenCount++;
+    else if (w.status === 'yellow') yellowCount++;
+    else if (w.status === 'red') redCount++;
+    else missedCount++;
+  }
+  return { greenCount, yellowCount, redCount, missedCount };
+}
+
+function logReadingDebug(...messages: string[]): void {
+  if (process.env.DEBUG_READING_TRANSCRIPT === '1') {
+    console.debug(...messages);
+  }
+}
+
 function azureWordToStatus(
   errorType: 'None' | 'Omission' | 'Insertion' | 'Mispronunciation',
   accuracyScore: number,
@@ -200,36 +225,13 @@ export class EvaluateReadingUseCase implements IEvaluateReadingUseCase {
     };
   }
 
-  private async executeWithTranscription(
-    userId: string,
-    textId: string,
+  private buildWordScoresFromAlignment(
+    transcription: Awaited<ReturnType<ITranscriptionService['transcribe']>>,
     expectedWords: string[],
-    audioBuffer: Buffer,
-    mimeType: string,
-    languageCode: string,
-  ): Promise<EvaluateReadingResult> {
-    const transcription = await this.transcriptionService.transcribe(
-      audioBuffer,
-      mimeType,
-      languageCode,
-    );
-
-    const transcribedWords = transcription.words.map((w) => w.word);
-    const blindTranscript = transcribedWords.join(' ').trim();
-
-    if (process.env.DEBUG_READING_TRANSCRIPT === '1') {
-      console.debug('=== PRONUNCIATION ASSESSMENT DEBUG ===');
-      console.debug('Transcription:', blindTranscript || '(empty or silent)');
-    }
-
-    const durationSecondsFromApi = Math.max(
-      transcription.durationSeconds,
-      transcription.words.length === 0 ? 1 : 0,
-    );
-
+    transcribedWords: string[],
+  ): (WordScoreEntity & { expected: string; spoken: string; index: number })[] {
     const alignedPairs = alignWordsNW(expectedWords, transcribedWords);
     const evaluated = evaluateAlignment(alignedPairs, expectedWords);
-
     const wordScores: (WordScoreEntity & {
       expected: string;
       spoken: string;
@@ -250,8 +252,6 @@ export class EvaluateReadingUseCase implements IEvaluateReadingUseCase {
         index: e.referenceIndex,
       };
     });
-
-    // Ensure exactly one score per reference word so the full text is colored in the UI
     while (wordScores.length < expectedWords.length) {
       const i = wordScores.length;
       wordScores.push({
@@ -265,46 +265,85 @@ export class EvaluateReadingUseCase implements IEvaluateReadingUseCase {
         index: i,
       });
     }
+    return wordScores;
+  }
 
-    let greenCount = 0;
-    let yellowCount = 0;
-    let redCount = 0;
-    let missedCount = 0;
-    for (const w of wordScores) {
-      if (w.status === 'green') greenCount++;
-      else if (w.status === 'yellow') yellowCount++;
-      else if (w.status === 'red') redCount++;
-      else missedCount++;
+  private async applyAiEvaluationAndRecount(
+    wordScores: (WordScoreEntity & {
+      expected: string;
+      spoken: string;
+      index: number;
+    })[],
+    expectedWords: string[],
+    blindTranscript: string,
+    languageCode: string,
+  ): Promise<{
+    greenCount: number;
+    yellowCount: number;
+    redCount: number;
+    missedCount: number;
+  }> {
+    const service = this.readingEvaluationService;
+    if (!service) return countStatuses(wordScores);
+    try {
+      const aiStatuses = await service.evaluateWordStatuses(
+        expectedWords,
+        blindTranscript || '(no speech detected)',
+        `${languageCode}-${languageCode.toUpperCase()}`,
+      );
+      for (let i = 0; i < wordScores.length; i++) {
+        const aiStatus = aiStatuses[i] ?? wordScores[i].status;
+        wordScores[i] = { ...wordScores[i], status: aiStatus };
+      }
+      return countStatuses(wordScores);
+    } catch {
+      return countStatuses(wordScores);
     }
+  }
+
+  private async executeWithTranscription(
+    userId: string,
+    textId: string,
+    expectedWords: string[],
+    audioBuffer: Buffer,
+    mimeType: string,
+    languageCode: string,
+  ): Promise<EvaluateReadingResult> {
+    const transcription = await this.transcriptionService.transcribe(
+      audioBuffer,
+      mimeType,
+      languageCode,
+    );
+
+    const transcribedWords = transcription.words.map((w) => w.word);
+    const blindTranscript = transcribedWords.join(' ').trim();
+    logReadingDebug(
+      '=== PRONUNCIATION ASSESSMENT DEBUG ===',
+      `Transcription: ${blindTranscript || '(empty or silent)'}`,
+    );
+
+    const durationSecondsFromApi = Math.max(
+      transcription.durationSeconds,
+      transcription.words.length === 0 ? 1 : 0,
+    );
+
+    const wordScores = this.buildWordScoresFromAlignment(
+      transcription,
+      expectedWords,
+      transcribedWords,
+    );
+    let counts = countStatuses(wordScores);
 
     if (this.readingEvaluationService && wordScores.length > 0) {
-      try {
-        const aiStatuses =
-          await this.readingEvaluationService.evaluateWordStatuses(
-            expectedWords,
-            blindTranscript || '(no speech detected)',
-            `${languageCode}-${languageCode.toUpperCase()}`,
-          );
-        greenCount = 0;
-        yellowCount = 0;
-        redCount = 0;
-        missedCount = 0;
-        for (let i = 0; i < wordScores.length; i++) {
-          const aiStatus = aiStatuses[i] ?? wordScores[i].status;
-          wordScores[i] = { ...wordScores[i], status: aiStatus };
-          if (aiStatus === 'green') greenCount++;
-          else if (aiStatus === 'yellow') yellowCount++;
-          else if (aiStatus === 'red') redCount++;
-          else missedCount++;
-        }
-      } catch {
-        greenCount = wordScores.filter((w) => w.status === 'green').length;
-        yellowCount = wordScores.filter((w) => w.status === 'yellow').length;
-        redCount = wordScores.filter((w) => w.status === 'red').length;
-        missedCount = wordScores.filter((w) => w.status === 'missed').length;
-      }
+      counts = await this.applyAiEvaluationAndRecount(
+        wordScores,
+        expectedWords,
+        blindTranscript,
+        languageCode,
+      );
     }
 
+    const { greenCount, yellowCount, redCount, missedCount } = counts;
     const wordsRead = expectedWords.length - missedCount;
     const durationSeconds =
       durationSecondsFromApi > 0

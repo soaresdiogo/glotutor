@@ -111,16 +111,6 @@ export default function LoginPage() {
                 : t('login.signIn')}
             </button>
           </form>
-
-          <p className="mt-8 text-center text-sm text-(--text-muted)">
-            {t('login.noAccountSignUp')}{' '}
-            <Link
-              href="/signup"
-              className="font-medium text-(--accent) hover:underline"
-            >
-              {t('common.signUp')}
-            </Link>
-          </p>
         </div>
       </div>
     </div>
