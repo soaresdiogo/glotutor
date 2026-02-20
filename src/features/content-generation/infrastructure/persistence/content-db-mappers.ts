@@ -269,6 +269,65 @@ function mapExerciseType(
 // evaluation criteria, fluency_gym. rich_content holds the same for querying.
 //
 
+const SPEAKING_FIXATION_TYPES = [
+  'fill_blank',
+  'multiple_choice',
+  'reorder_sentence',
+  'match_expression',
+] as const;
+
+type SpeakingFixationRow = {
+  questionNumber: number;
+  type: (typeof SPEAKING_FIXATION_TYPES)[number];
+  questionText: string;
+  options: string[] | Record<string, string>[] | null;
+  correctAnswer: string;
+  explanationText: string;
+};
+
+function getNativeExpressionsFromScenarios(
+  scenarios: Array<Record<string, unknown>>,
+): string[] {
+  return scenarios
+    .flatMap(
+      (s) =>
+        (s as { target_chunks?: { bonus?: string[] } }).target_chunks?.bonus ??
+        [],
+    )
+    .filter((v, i, a) => a.indexOf(v) === i)
+    .slice(0, 20);
+}
+
+function normalizeFixationExercise(
+  ex: Record<string, unknown>,
+  index: number,
+): SpeakingFixationRow | null {
+  const typeRaw = (ex.type as string) ?? 'fill_blank';
+  const type = SPEAKING_FIXATION_TYPES.includes(
+    typeRaw as (typeof SPEAKING_FIXATION_TYPES)[number],
+  )
+    ? (typeRaw as (typeof SPEAKING_FIXATION_TYPES)[number])
+    : 'fill_blank';
+  const questionText = (
+    typeof ex.question_text === 'string' ? ex.question_text : ''
+  ).trim();
+  const correctAnswer = (
+    typeof ex.correct_answer === 'string' ? ex.correct_answer : ''
+  ).trim();
+  if (!questionText || !correctAnswer) return null;
+  return {
+    questionNumber: Number(ex.question_number) || index + 1,
+    type,
+    questionText,
+    options: (ex.options as string[] | Record<string, string>[] | null) ?? null,
+    correctAnswer,
+    explanationText: (typeof ex.explanation_text === 'string'
+      ? ex.explanation_text
+      : ''
+    ).trim(),
+  };
+}
+
 export async function saveSpeakingToDb(
   db: DbClient,
   output: unknown,
@@ -290,19 +349,9 @@ export async function saveSpeakingToDb(
   const slug = `${spec.moduleId}-speaking`;
   const description =
     first?.situation?.description_for_learner ?? spec.situationalTheme ?? '';
-
   const richContextPrompt = JSON.stringify(content);
-
   const keyVocabulary = first?.target_chunks?.primary ?? [];
-
-  const nativeExpressions = scenarios
-    .flatMap(
-      (s) =>
-        (s as { target_chunks?: { bonus?: string[] } }).target_chunks?.bonus ??
-        [],
-    )
-    .filter((v, i, a) => a.indexOf(v) === i)
-    .slice(0, 20);
+  const nativeExpressions = getNativeExpressionsFromScenarios(scenarios);
 
   const [inserted] = await db
     .insert(speakingTopics)
@@ -325,40 +374,12 @@ export async function saveSpeakingToDb(
   const fixationExercises = (content.fixation_exercises ?? []) as Array<
     Record<string, unknown>
   >;
-  const allowedTypes = [
-    'fill_blank',
-    'multiple_choice',
-    'reorder_sentence',
-    'match_expression',
-  ] as const;
-
   for (let i = 0; i < fixationExercises.length; i++) {
-    const ex = fixationExercises[i];
-    const typeRaw = (ex.type as string) ?? 'fill_blank';
-    const type = allowedTypes.includes(typeRaw as (typeof allowedTypes)[number])
-      ? (typeRaw as (typeof allowedTypes)[number])
-      : 'fill_blank';
-    const questionNumber = Number(ex.question_number) || i + 1;
-    const questionText = (
-      typeof ex.question_text === 'string' ? ex.question_text : ''
-    ).trim();
-    const correctAnswer = (
-      typeof ex.correct_answer === 'string' ? ex.correct_answer : ''
-    ).trim();
-    const explanationText = (
-      typeof ex.explanation_text === 'string' ? ex.explanation_text : ''
-    ).trim();
-    if (!questionText || !correctAnswer) continue;
-
-    const options = ex.options as string[] | Record<string, string>[] | null;
+    const row = normalizeFixationExercise(fixationExercises[i], i);
+    if (!row) continue;
     await db.insert(speakingExercises).values({
       topicId: inserted.id,
-      questionNumber,
-      type,
-      questionText,
-      options: options ?? null,
-      correctAnswer,
-      explanationText,
+      ...row,
     });
   }
 }

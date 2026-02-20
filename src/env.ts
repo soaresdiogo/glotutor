@@ -30,11 +30,15 @@ const serverSchema = z.object({
   S3_SECRET_ACCESS_KEY: z.string().optional(),
   S3_BUCKET_NAME: z.string().optional(),
   S3_REGION: z.string().optional(),
+  STRIPE_SECRET_KEY: z.string().min(1).optional(),
+  STRIPE_WEBHOOK_SECRET: z.string().default(''),
+  STRIPE_PUBLISHABLE_KEY: z.string().optional(),
 });
 
 const clientSchema = z.object({
   NEXT_PUBLIC_APP_URL: z.url().default('http://localhost:3000'),
   NEXT_PUBLIC_API_URI: z.url().default('http://localhost:3000/api'),
+  NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: z.string().default(''),
 });
 
 function getServerEnv() {
@@ -55,6 +59,8 @@ function getClientEnv() {
   return clientSchema.parse({
     NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
     NEXT_PUBLIC_API_URI: process.env.NEXT_PUBLIC_API_URI,
+    NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY:
+      process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? '',
   });
 }
 

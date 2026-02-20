@@ -23,6 +23,52 @@ function formatWeekMinutes(mins: number): string {
   return `${mins}m`;
 }
 
+function pct(count: number, total: number): number {
+  if (total <= 0 || count < 0) return 0;
+  return Math.min(100, Math.round((count / total) * 100));
+}
+
+type ProgressCounts = {
+  speaking: number;
+  listening: number;
+  reading: number;
+  nativeLessons: number;
+};
+
+function computeModuleProgress(
+  progressData:
+    | {
+        speaking: unknown[];
+        listening: unknown[];
+        reading: unknown[];
+        nativeLessons: unknown[];
+      }
+    | null
+    | undefined,
+  counts: ProgressCounts,
+): { speaking: number; listening: number; reading: number; learning: number } {
+  if (!progressData) {
+    return { speaking: 0, listening: 0, reading: 0, learning: 0 };
+  }
+  return {
+    speaking: pct(progressData.speaking.length, counts.speaking),
+    listening: pct(progressData.listening.length, counts.listening),
+    reading: pct(progressData.reading.length, counts.reading),
+    learning: pct(progressData.nativeLessons.length, counts.nativeLessons),
+  };
+}
+
+function getOverviewStats(
+  overview: { totalXp: number; thisWeekMinutes: number } | null | undefined,
+): { totalXpDisplay: string; weekMinutesDisplay: string } {
+  return {
+    totalXpDisplay: overview ? formatXp(overview.totalXp) : '0',
+    weekMinutesDisplay: overview
+      ? formatWeekMinutes(overview.thisWeekMinutes)
+      : '0m',
+  };
+}
+
 export default function DashboardPage() {
   const pageTitleId = useId();
   const statsHeadingId = useId();
@@ -50,40 +96,23 @@ export default function DashboardPage() {
     (progressData?.reading.length ?? 0) +
     (progressData?.speaking.length ?? 0);
 
-  const speakingProgress =
-    speakingCount > 0 && progressData
-      ? Math.min(
-          100,
-          Math.round((progressData.speaking.length / speakingCount) * 100),
-        )
-      : 0;
-  const listeningProgress =
-    listeningCount > 0 && progressData
-      ? Math.min(
-          100,
-          Math.round((progressData.listening.length / listeningCount) * 100),
-        )
-      : 0;
-  const readingProgress =
-    readingCount > 0 && progressData
-      ? Math.min(
-          100,
-          Math.round((progressData.reading.length / readingCount) * 100),
-        )
-      : 0;
-  const learningProgress =
-    nativeLessonsCount > 0 && progressData
-      ? Math.min(
-          100,
-          Math.round(
-            (progressData.nativeLessons.length / nativeLessonsCount) * 100,
-          ),
-        )
-      : 0;
+  const {
+    speaking: speakingProgress,
+    listening: listeningProgress,
+    reading: readingProgress,
+    learning: learningProgress,
+  } = computeModuleProgress(progressData, {
+    speaking: speakingCount,
+    listening: listeningCount,
+    reading: readingCount,
+    nativeLessons: nativeLessonsCount,
+  });
 
   const streak = overview?.streakDays ?? 0;
+  const streakBest = streak >= 7;
+  const { totalXpDisplay, weekMinutesDisplay } = getOverviewStats(overview);
   const firstSteps = totalCompleted >= 10;
-  const weekWarrior = streak >= 7;
+  const weekWarrior = streakBest;
   const speaker = (progressData?.speaking.length ?? 0) >= 50;
   const bookworm = (progressData?.reading.length ?? 0) >= 25;
 
@@ -121,7 +150,7 @@ export default function DashboardPage() {
           </h2>
           <StatCard
             icon="⚡"
-            value={overview ? formatXp(overview.totalXp) : '0'}
+            value={totalXpDisplay}
             label={t('dashboard.stats.totalXp')}
             accentColor="accent"
           />
@@ -135,15 +164,13 @@ export default function DashboardPage() {
             icon="🔥"
             value={streak}
             label={t('dashboard.stats.dayStreak')}
-            trend={streak >= 7 ? t('dashboard.streakBest') : undefined}
-            trendUp={streak >= 7}
+            trend={streakBest ? t('dashboard.streakBest') : undefined}
+            trendUp={streakBest}
             accentColor="orange"
           />
           <StatCard
             icon="⏱️"
-            value={
-              overview ? formatWeekMinutes(overview.thisWeekMinutes) : '0m'
-            }
+            value={weekMinutesDisplay}
             label={t('dashboard.stats.thisWeek')}
             accentColor="cyan"
           />

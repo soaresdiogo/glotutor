@@ -4,6 +4,7 @@ export type CreateUserInput = {
   email: string;
   passwordHash: string;
   name?: string | null;
+  tenantId?: string | null;
 };
 
 export interface IUserRepository {

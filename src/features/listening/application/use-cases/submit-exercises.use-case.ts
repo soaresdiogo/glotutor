@@ -97,6 +97,41 @@ function getOverallFeedback(score: number, total: number): string {
   return 'needsWork';
 }
 
+type PodcastDetail = Awaited<ReturnType<IPodcastRepository['findDetailById']>>;
+
+function validateForSubmit(
+  detail: NonNullable<PodcastDetail>,
+  input: SubmitExercisesInput,
+): void {
+  const progress = detail.progress;
+  if (progress?.exerciseCompletedAt) {
+    throw new BadRequestError(
+      'Exercises already completed for this podcast.',
+      'listening.api.exercisesAlreadyCompleted',
+    );
+  }
+  if ((progress?.listenedPercentage ?? 0) < MIN_LISTEN_PERCENTAGE) {
+    throw new BadRequestError(
+      'Listen to at least 80% of the audio before submitting.',
+      'listening.api.listenMoreRequired',
+    );
+  }
+  const exercises = detail.exercises;
+  if (!exercises.length) {
+    throw new BadRequestError(
+      'Podcast has no exercises.',
+      'listening.api.invalidExercises',
+    );
+  }
+  const totalQuestions = exercises.length;
+  if (!input.answers || input.answers.length !== totalQuestions) {
+    throw new BadRequestError(
+      `Exactly ${totalQuestions} answers are required.`,
+      'listening.api.invalidAnswers',
+    );
+  }
+}
+
 export class SubmitExercisesUseCase implements ISubmitExercisesUseCase {
   constructor(
     private readonly podcastRepo: IPodcastRepository,
@@ -105,51 +140,55 @@ export class SubmitExercisesUseCase implements ISubmitExercisesUseCase {
     private readonly profileProvider: IStudentProfileProvider,
   ) {}
 
-  async execute(
-    userId: string,
-    podcastId: string,
+  private async evaluateOneQuestion(
+    questionNumber: number,
+    ex: PodcastExerciseEntity,
+    studentAnswer: string,
+    detail: NonNullable<PodcastDetail>,
+    nativeLanguage: string,
+  ): Promise<SubmitExercisesOutput['perQuestion'][number]> {
+    if (ex.type === 'open_ended') {
+      const evalResult = await this.aiGateway.evaluateOpenEndedAnswer({
+        questionText: ex.questionText,
+        expectedAnswer: ex.correctAnswer,
+        studentAnswer,
+        targetLanguage: detail.languageCode,
+        nativeLanguage,
+        cefrLevel: detail.cefrLevel,
+      });
+      const correct = evalResult.score === 1;
+      return {
+        questionNumber,
+        correct,
+        explanation: evalResult.feedback || ex.explanationText,
+        studentAnswer,
+        correctAnswer: ex.correctAnswer,
+      };
+    }
+    const correct = scoreAnswer(ex, studentAnswer);
+    const displayCorrect =
+      ex.type === 'sentence_order'
+        ? resolveSentenceOrderCorrect(ex.options, ex.correctAnswer)
+        : ex.correctAnswer;
+    return {
+      questionNumber,
+      correct,
+      explanation: ex.explanationText,
+      studentAnswer,
+      correctAnswer: displayCorrect,
+    };
+  }
+
+  private async buildPerQuestionResults(
+    detail: NonNullable<PodcastDetail>,
     input: SubmitExercisesInput,
-  ): Promise<SubmitExercisesOutput> {
-    const detail = await this.podcastRepo.findDetailById(podcastId, userId);
-    if (!detail) {
-      throw new NotFoundError(
-        'Podcast not found.',
-        'listening.api.podcastNotFound',
-      );
-    }
-    const progress = detail.progress;
-    if (progress?.exerciseCompletedAt) {
-      throw new BadRequestError(
-        'Exercises already completed for this podcast.',
-        'listening.api.exercisesAlreadyCompleted',
-      );
-    }
-    if ((progress?.listenedPercentage ?? 0) < MIN_LISTEN_PERCENTAGE) {
-      throw new BadRequestError(
-        'Listen to at least 80% of the audio before submitting.',
-        'listening.api.listenMoreRequired',
-      );
-    }
-
+    nativeLanguage: string,
+  ): Promise<{
+    perQuestion: SubmitExercisesOutput['perQuestion'];
+    score: number;
+  }> {
     const exercises = detail.exercises;
-    if (!exercises.length) {
-      throw new BadRequestError(
-        'Podcast has no exercises.',
-        'listening.api.invalidExercises',
-      );
-    }
-
     const totalQuestions = exercises.length;
-    if (!input.answers || input.answers.length !== totalQuestions) {
-      throw new BadRequestError(
-        `Exactly ${totalQuestions} answers are required.`,
-        'listening.api.invalidAnswers',
-      );
-    }
-
-    const profile = await this.profileProvider.getProfile(userId);
-    const nativeLanguage = profile?.nativeLanguageCode ?? 'en';
-
     const byNumber = new Map(exercises.map((e) => [e.questionNumber, e]));
     const answersByNumber = new Map(
       input.answers.map((a) => [a.questionNumber, a.answer]),
@@ -170,43 +209,42 @@ export class SubmitExercisesUseCase implements ISubmitExercisesUseCase {
         });
         continue;
       }
-      let correct: boolean;
-      if (ex.type === 'open_ended') {
-        const evalResult = await this.aiGateway.evaluateOpenEndedAnswer({
-          questionText: ex.questionText,
-          expectedAnswer: ex.correctAnswer,
-          studentAnswer,
-          targetLanguage: detail.languageCode,
-          nativeLanguage,
-          cefrLevel: detail.cefrLevel,
-        });
-        correct = evalResult.score === 1;
-        perQuestion.push({
-          questionNumber: i,
-          correct,
-          explanation: evalResult.feedback || ex.explanationText,
-          studentAnswer,
-          correctAnswer: ex.correctAnswer,
-        });
-      } else {
-        correct = scoreAnswer(ex, studentAnswer);
-        const displayCorrect =
-          ex.type === 'sentence_order'
-            ? resolveSentenceOrderCorrect(ex.options, ex.correctAnswer)
-            : ex.correctAnswer;
-        perQuestion.push({
-          questionNumber: i,
-          correct,
-          explanation: ex.explanationText,
-          studentAnswer,
-          correctAnswer: displayCorrect,
-        });
-      }
-      if (correct) score++;
+      const result = await this.evaluateOneQuestion(
+        i,
+        ex,
+        studentAnswer,
+        detail,
+        nativeLanguage,
+      );
+      perQuestion.push(result);
+      if (result.correct) score++;
     }
+    return { perQuestion, score };
+  }
 
-    const feedbackKey = getOverallFeedback(score, totalQuestions);
-    const overallFeedback = feedbackKey;
+  async execute(
+    userId: string,
+    podcastId: string,
+    input: SubmitExercisesInput,
+  ): Promise<SubmitExercisesOutput> {
+    const detail = await this.podcastRepo.findDetailById(podcastId, userId);
+    if (!detail) {
+      throw new NotFoundError(
+        'Podcast not found.',
+        'listening.api.podcastNotFound',
+      );
+    }
+    validateForSubmit(detail, input);
+
+    const profile = await this.profileProvider.getProfile(userId);
+    const nativeLanguage = profile?.nativeLanguageCode ?? 'en';
+    const { perQuestion, score } = await this.buildPerQuestionResults(
+      detail,
+      input,
+      nativeLanguage,
+    );
+    const totalQuestions = detail.exercises.length;
+    const overallFeedback = getOverallFeedback(score, totalQuestions);
 
     await this.progressRepo.updateExerciseResults(userId, podcastId, {
       exerciseScore: score,

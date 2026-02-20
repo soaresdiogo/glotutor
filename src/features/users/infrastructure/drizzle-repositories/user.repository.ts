@@ -17,6 +17,7 @@ export class UserRepository implements IUserRepository {
         email: data.email.toLowerCase(),
         passwordHash: data.passwordHash,
         name: data.name ?? null,
+        tenantId: data.tenantId ?? null,
       })
       .returning();
     if (!row) throw new Error('Failed to create user');

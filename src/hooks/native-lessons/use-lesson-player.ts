@@ -25,6 +25,25 @@ export type ExerciseState = {
   bestScore: number;
 };
 
+function evaluateSituationNoPatterns(
+  userAnswer: string,
+  feedbackCorrect: string,
+  feedbackNeeds: string,
+  expectedAnswer: string | undefined,
+): ExerciseResult {
+  const trimmed = userAnswer.trim();
+  const matchesExpected =
+    expectedAnswer != null &&
+    trimmed.toLowerCase() === expectedAnswer.toLowerCase().trim();
+  const hasAnswer = trimmed.length > 0;
+  return {
+    isCorrect: hasAnswer,
+    score: matchesExpected ? 10 : hasAnswer ? 8 : 0,
+    feedback: hasAnswer ? feedbackCorrect : feedbackNeeds,
+    expectedAnswer,
+  };
+}
+
 function evaluateSituation(
   userAnswer: string,
   exercise: Extract<LessonExercise, { type: 'SITUATION' }>,
@@ -36,17 +55,12 @@ function evaluateSituation(
   const expectedAnswer = exercise.expected_answer;
 
   if (patterns.length === 0) {
-    const trimmed = userAnswer.trim();
-    const matchesExpected =
-      expectedAnswer != null &&
-      trimmed.toLowerCase() === expectedAnswer.toLowerCase().trim();
-    const hasAnswer = trimmed.length > 0;
-    return {
-      isCorrect: hasAnswer,
-      score: matchesExpected ? 10 : hasAnswer ? 8 : 0,
-      feedback: hasAnswer ? feedbackCorrect : feedbackNeeds,
+    return evaluateSituationNoPatterns(
+      userAnswer,
+      feedbackCorrect,
+      feedbackNeeds,
       expectedAnswer,
-    };
+    );
   }
 
   const normalized = userAnswer.toLowerCase().trim();

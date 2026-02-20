@@ -1,3 +1,20 @@
+import { vi } from 'vitest';
+
+// Mock tenant resolution so API route tests do not hit the database
+const mockTenant = {
+  id: 't1',
+  slug: 'test',
+  name: 'Test',
+  domain: 'localhost',
+  logoUrl: null,
+  status: 'active',
+  plan: 'free',
+};
+vi.mock('@/shared/lib/require-tenant', () => ({
+  getTenantFromRequest: vi.fn().mockResolvedValue(mockTenant),
+  getDomainFromRequest: vi.fn().mockReturnValue('localhost'),
+}));
+
 // Set environment variables before any imports
 process.env.DATABASE_URL = 'postgresql://test:test@localhost:5432/test';
 process.env.PRIVATE_KEY = 'test-private-key';
