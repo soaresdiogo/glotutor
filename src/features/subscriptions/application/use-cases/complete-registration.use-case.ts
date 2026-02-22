@@ -1,5 +1,6 @@
 import { randomBytes } from 'node:crypto';
 import type Stripe from 'stripe';
+import type { IConsentRecordRepository } from '@/features/subscriptions/domain/repositories/consent-record-repository.interface';
 import type { IPendingSignupRepository } from '@/features/subscriptions/domain/repositories/pending-signup-repository.interface';
 import type { ISubscriptionRepository } from '@/features/subscriptions/domain/repositories/subscription-repository.interface';
 import type { IUserRepository } from '@/features/users/domain/repositories/user-repository.interface';
@@ -7,6 +8,13 @@ import type { IStripeService } from '@/infrastructure/services/stripe/stripe.ser
 import { hashPassword } from '@/shared/lib/auth/password';
 import { BadRequestError } from '@/shared/lib/errors';
 import type { CompleteRegistrationDto } from '../dto/complete-registration.dto';
+
+/** Version of the privacy policy accepted at signup (for consent_records). */
+const PRIVACY_POLICY_CONSENT_VERSION = '2026-01-17';
+const PRIVACY_POLICY_CONSENT_TYPE = 'privacy_policy';
+/** Version of the terms of use accepted at signup (for consent_records). */
+const TERMS_OF_USE_CONSENT_VERSION = '2026-01-17';
+const TERMS_OF_USE_CONSENT_TYPE = 'terms_of_use';
 
 /** Shape we need from Stripe Checkout.Session (expanded subscription). */
 type StripeSubscriptionShape = {
@@ -66,6 +74,7 @@ export class CompleteRegistrationUseCase
     private readonly userRepo: IUserRepository,
     private readonly subscriptionRepo: ISubscriptionRepository,
     private readonly pendingSignupRepo: IPendingSignupRepository,
+    private readonly consentRecordRepo: IConsentRecordRepository,
   ) {}
 
   async execute(
@@ -77,7 +86,25 @@ export class CompleteRegistrationUseCase
     ]);
     const ctx = this.parseSessionContext(session, dto);
 
-    const { user, accountId } = await this.resolveOrCreateUser(ctx);
+    const { user, accountId, isNewUser, privacyPolicyAcceptedAt } =
+      await this.resolveOrCreateUser(ctx);
+    if (isNewUser) {
+      const grantedAt = privacyPolicyAcceptedAt ?? new Date();
+      await this.consentRecordRepo.create({
+        userId: user.userId,
+        consentType: PRIVACY_POLICY_CONSENT_TYPE,
+        version: PRIVACY_POLICY_CONSENT_VERSION,
+        granted: true,
+        grantedAt,
+      });
+      await this.consentRecordRepo.create({
+        userId: user.userId,
+        consentType: TERMS_OF_USE_CONSENT_TYPE,
+        version: TERMS_OF_USE_CONSENT_VERSION,
+        granted: true,
+        grantedAt,
+      });
+    }
     const subscriptionLinked = await this.linkSubscriptionIfNeeded(
       ctx,
       accountId,
@@ -137,16 +164,21 @@ export class CompleteRegistrationUseCase
       email: string;
     };
     accountId: string;
+    isNewUser: boolean;
+    privacyPolicyAcceptedAt: Date | null;
   }> {
     const existing = await this.userRepo.findByEmail(ctx.email);
     if (existing) {
       return {
         user: existing,
         accountId: existing.userId,
+        isNewUser: false,
+        privacyPolicyAcceptedAt: null,
       };
     }
 
     const pending = await this.pendingSignupRepo.findValidByEmail(ctx.email);
+    const privacyPolicyAcceptedAt = pending?.privacyPolicyAcceptedAt ?? null;
     const passwordHash = pending
       ? await this.consumePendingSignupPassword(ctx.email, pending.passwordHash)
       : await this.generateRandomPasswordHash();
@@ -160,7 +192,12 @@ export class CompleteRegistrationUseCase
     await this.userRepo.updateEmailVerified(created.userId, true);
     await this.userRepo.updateStatus(created.userId, 'active');
 
-    return { user: created, accountId: created.userId };
+    return {
+      user: created,
+      accountId: created.userId,
+      isNewUser: true,
+      privacyPolicyAcceptedAt,
+    };
   }
 
   private async consumePendingSignupPassword(

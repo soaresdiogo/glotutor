@@ -1,0 +1,1 @@
+ALTER TABLE "pending_signups" ADD COLUMN "privacy_policy_accepted_at" timestamp;

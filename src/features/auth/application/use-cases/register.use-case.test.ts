@@ -22,6 +22,7 @@ describe('RegisterUseCase', () => {
   let mockEmailService: {
     sendVerificationEmail: ReturnType<typeof vi.fn>;
   };
+  let mockConsentRecordRepo: { create: ReturnType<typeof vi.fn> };
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -32,10 +33,12 @@ describe('RegisterUseCase', () => {
     mockEmailService = {
       sendVerificationEmail: vi.fn().mockResolvedValue(undefined),
     };
+    mockConsentRecordRepo = { create: vi.fn().mockResolvedValue(undefined) };
     useCase = new RegisterUseCase(
       mockUserRepo,
       mockEmailVerificationRepo as never,
       mockEmailService as never,
+      mockConsentRecordRepo as never,
     );
   });
 
@@ -50,6 +53,8 @@ describe('RegisterUseCase', () => {
       email: 'new@example.com',
       password: 'Password1!',
       confirmPassword: 'Password1!',
+      acceptPrivacy: true,
+      acceptTerms: true,
     });
 
     expect(result).toEqual({ userId: 'new-id', email: 'new@example.com' });
@@ -69,6 +74,23 @@ describe('RegisterUseCase', () => {
       'new@example.com',
       expect.stringContaining('/verify-email?token='),
     );
+    expect(mockConsentRecordRepo.create).toHaveBeenCalledTimes(2);
+    expect(mockConsentRecordRepo.create).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        userId: 'new-id',
+        consentType: 'privacy_policy',
+        granted: true,
+      }),
+    );
+    expect(mockConsentRecordRepo.create).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        userId: 'new-id',
+        consentType: 'terms_of_use',
+        granted: true,
+      }),
+    );
   });
 
   it('should throw BadRequestError when email is already taken', async () => {
@@ -80,6 +102,8 @@ describe('RegisterUseCase', () => {
         email: 'user@example.com',
         password: 'Password1!',
         confirmPassword: 'Password1!',
+        acceptPrivacy: true,
+        acceptTerms: true,
       }),
     ).rejects.toThrow('An account with this email already exists.');
 

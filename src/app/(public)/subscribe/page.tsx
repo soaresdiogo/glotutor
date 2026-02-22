@@ -4,6 +4,8 @@ import { Callout } from '@radix-ui/themes';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import { PrivacyPolicyModal } from '@/components/dashboard/privacy-policy-modal';
+import { TermsOfUseModal } from '@/components/dashboard/terms-of-use-modal';
 import { LanguageSelect } from '@/components/language-select';
 import { PasswordInput } from '@/components/password-input';
 import { PasswordMatchIndicator } from '@/components/password-match-indicator';
@@ -21,6 +23,8 @@ export default function SubscribePage() {
   const planType = parsePlanFromQuery(planParam);
 
   const [status, setStatus] = useState<AvailabilityStatus>('loading');
+  const [privacyModalOpen, setPrivacyModalOpen] = useState(false);
+  const [termsModalOpen, setTermsModalOpen] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -57,6 +61,8 @@ export default function SubscribePage() {
     idEmail,
     idPassword,
     idConfirm,
+    idAcceptPrivacy,
+    idAcceptTerms,
     form,
     showError,
     password,
@@ -64,6 +70,7 @@ export default function SubscribePage() {
     subscribeMutation,
     onSubmit,
     emailSent,
+    isValid,
   } = useSubscribe(planType);
 
   const {
@@ -243,9 +250,76 @@ export default function SubscribePage() {
               />
             </div>
 
+            <div className="flex flex-col gap-2">
+              <div className="flex items-start gap-3">
+                <input
+                  id={idAcceptTerms}
+                  type="checkbox"
+                  className="mt-1 h-4 w-4 shrink-0 rounded border-(--border) text-(--accent) focus:ring-(--accent)"
+                  {...form.register('acceptTerms')}
+                  aria-invalid={!!form.formState.errors.acceptTerms}
+                />
+                <label
+                  htmlFor={idAcceptTerms}
+                  className="text-sm text-(--text-muted)"
+                >
+                  {t('subscribe.acceptTerms')}{' '}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setTermsModalOpen(true);
+                    }}
+                    className="font-medium text-(--accent) hover:underline"
+                  >
+                    {t('profile.termsOfUse')}
+                  </button>
+                </label>
+              </div>
+              {showError('acceptTerms') && (
+                <p className="text-sm text-(--red)">
+                  {t('subscribe.termsRequired')}
+                </p>
+              )}
+            </div>
+            <div className="flex flex-col gap-2">
+              <div className="flex items-start gap-3">
+                <input
+                  id={idAcceptPrivacy}
+                  type="checkbox"
+                  className="mt-1 h-4 w-4 shrink-0 rounded border-(--border) text-(--accent) focus:ring-(--accent)"
+                  {...form.register('acceptPrivacy')}
+                  aria-invalid={!!form.formState.errors.acceptPrivacy}
+                />
+                <label
+                  htmlFor={idAcceptPrivacy}
+                  className="text-sm text-(--text-muted)"
+                >
+                  {t('subscribe.acceptPrivacy')}{' '}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setPrivacyModalOpen(true);
+                    }}
+                    className="font-medium text-(--accent) hover:underline"
+                  >
+                    {t('profile.privacyPolicy')}
+                  </button>
+                </label>
+              </div>
+              {showError('acceptPrivacy') && (
+                <p className="text-sm text-(--red)">
+                  {t('subscribe.privacyRequired')}
+                </p>
+              )}
+            </div>
+
             <button
               type="submit"
-              disabled={subscribeMutation.isPending}
+              disabled={subscribeMutation.isPending || !isValid}
               className="mt-2 flex w-full cursor-pointer items-center justify-center rounded-xl bg-(--accent) py-3.5 text-sm font-semibold text-white shadow-lg shadow-(--accent)/20 transition hover:opacity-95 disabled:opacity-60"
             >
               {subscribeMutation.isPending
@@ -265,6 +339,19 @@ export default function SubscribePage() {
           </p>
         </div>
       </div>
+
+      <PrivacyPolicyModal
+        open={privacyModalOpen}
+        onClose={() => setPrivacyModalOpen(false)}
+      />
+      <TermsOfUseModal
+        open={termsModalOpen}
+        onClose={() => setTermsModalOpen(false)}
+        onOpenPrivacy={() => {
+          setTermsModalOpen(false);
+          setPrivacyModalOpen(true);
+        }}
+      />
     </div>
   );
 }

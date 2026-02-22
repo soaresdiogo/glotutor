@@ -11,6 +11,8 @@ export const pendingSignups = pgTable(
     fullName: varchar('full_name', { length: 255 }),
     planType: varchar('plan_type', { length: 30 }).notNull(),
     expiresAt: timestamp('expires_at').notNull(),
+    /** When the user accepted the privacy policy (mandatory for signup). */
+    privacyPolicyAcceptedAt: timestamp('privacy_policy_accepted_at'),
     createdAt: timestamp('created_at').notNull().defaultNow(),
   },
   (t) => [

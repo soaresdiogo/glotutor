@@ -27,6 +27,66 @@ export class CreateCheckoutSessionUseCase
     private readonly stripeService: IStripeService,
   ) {}
 
+  private async validateConsentAndUpsertPendingSignup(
+    dto: CreateCheckoutSessionDto,
+  ): Promise<void> {
+    const password = dto.password;
+    if (!password || password.length === 0) return;
+
+    if (dto.acceptPrivacy !== true) {
+      throw new BadRequestError(
+        'You must accept the Privacy Policy to create an account.',
+        'subscribe.privacyRequired',
+      );
+    }
+    if (dto.acceptTerms !== true) {
+      throw new BadRequestError(
+        'You must accept the Terms of Use to create an account.',
+        'subscribe.termsRequired',
+      );
+    }
+    const passwordHash = await hashPassword(password);
+    const expiresAt = new Date(
+      Date.now() + PENDING_SIGNUP_EXPIRY_HOURS * 60 * 60 * 1000,
+    );
+    const now = new Date();
+    await this.pendingSignupRepo.upsert({
+      email: dto.email,
+      passwordHash,
+      fullName: dto.fullName,
+      planType: dto.planType,
+      expiresAt,
+      privacyPolicyAcceptedAt: now,
+    });
+  }
+
+  private async resolveCustomerId(
+    dto: CreateCheckoutSessionDto,
+    tenantId: string,
+  ): Promise<string> {
+    if (!dto.accountId) {
+      const customer = await this.stripeService.createCustomer(
+        dto.email,
+        dto.fullName,
+        { tenantId },
+      );
+      return customer.id;
+    }
+    const existingSubs = await this.subscriptionRepo.findByUserId(
+      dto.accountId,
+    );
+    const withCustomer = existingSubs.find((s) => s.stripeCustomerId);
+    if (withCustomer?.stripeCustomerId) {
+      return withCustomer.stripeCustomerId;
+    }
+    const customer = await this.stripeService.createCustomer(
+      dto.email,
+      dto.fullName,
+      { tenantId },
+    );
+    return customer.id;
+  }
+
   async execute(
     dto: CreateCheckoutSessionDto,
     context: { tenantId: string; successUrl: string; cancelUrl: string },
@@ -42,7 +102,7 @@ export class CreateCheckoutSessionUseCase
       );
     }
     const stripePriceId = plan.stripePriceId;
-    if (!stripePriceId || !stripePriceId.startsWith('price_')) {
+    if (!stripePriceId?.startsWith('price_')) {
       throw new BadRequestError(
         'Plan is missing a valid Stripe Price ID',
         'subscriptions.invalidPrice',
@@ -56,44 +116,8 @@ export class CreateCheckoutSessionUseCase
       );
     }
 
-    if (dto.password != null && dto.password.length > 0) {
-      const passwordHash = await hashPassword(dto.password);
-      const expiresAt = new Date(
-        Date.now() + PENDING_SIGNUP_EXPIRY_HOURS * 60 * 60 * 1000,
-      );
-      await this.pendingSignupRepo.upsert({
-        email: dto.email,
-        passwordHash,
-        fullName: dto.fullName,
-        planType: dto.planType,
-        expiresAt,
-      });
-    }
-
-    let customerId: string;
-    if (dto.accountId) {
-      const existingSubs = await this.subscriptionRepo.findByUserId(
-        dto.accountId,
-      );
-      const withCustomer = existingSubs.find((s) => s.stripeCustomerId);
-      if (withCustomer?.stripeCustomerId) {
-        customerId = withCustomer.stripeCustomerId;
-      } else {
-        const customer = await this.stripeService.createCustomer(
-          dto.email,
-          dto.fullName,
-          { tenantId: context.tenantId },
-        );
-        customerId = customer.id;
-      }
-    } else {
-      const customer = await this.stripeService.createCustomer(
-        dto.email,
-        dto.fullName,
-        { tenantId: context.tenantId },
-      );
-      customerId = customer.id;
-    }
+    await this.validateConsentAndUpsertPendingSignup(dto);
+    const customerId = await this.resolveCustomerId(dto, context.tenantId);
 
     const metadata: Record<string, string> = {
       tenantId: context.tenantId,
