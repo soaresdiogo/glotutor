@@ -7,6 +7,7 @@ import {
   getKeyFromStoredUrl,
   streamObjectByKey,
 } from '@/shared/lib/reading/s3-upload';
+import { getTenantFromRequest } from '@/shared/lib/require-tenant';
 
 import { getListeningAuthUser } from '../../../get-auth-user';
 
@@ -19,6 +20,7 @@ export async function GET(
   { params }: { params: Promise<{ podcastId: string }> },
 ) {
   try {
+    await getTenantFromRequest(req);
     const user = await getListeningAuthUser(req);
     if (!user) {
       throw new UnauthorizedError(

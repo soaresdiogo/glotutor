@@ -3,8 +3,9 @@
 import { useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { studentProfileApi } from '@/client-api/student-profile.api';
 import { userLanguagesApi } from '@/client-api/user-languages.api';
-import { LANGUAGES } from '@/components/onboarding/LanguageGrid';
+import { getLanguagesForStudy } from '@/components/onboarding/LanguageGrid';
 
 export default function AddLanguagePage() {
   const router = useRouter();
@@ -12,11 +13,17 @@ export default function AddLanguagePage() {
     queryKey: ['user-languages'],
     queryFn: () => userLanguagesApi.list(),
   });
+  const { data: profileData } = useQuery({
+    queryKey: ['student-profile'],
+    queryFn: () => studentProfileApi.get(),
+  });
 
   const userLanguages = new Set(data?.languages?.map((l) => l.language) ?? []);
   const languageLevels = new Map(
     data?.languages?.map((l) => [l.language, l.currentLevel]) ?? [],
   );
+  const nativeLanguageCode = profileData?.profile?.nativeLanguageCode ?? null;
+  const languagesToShow = getLanguagesForStudy(nativeLanguageCode);
 
   const handleSelect = (language: string) => {
     if (userLanguages.has(language)) return;
@@ -47,7 +54,7 @@ export default function AddLanguagePage() {
         or choose your level.
       </p>
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
-        {LANGUAGES.map((lang) => {
+        {languagesToShow.map((lang) => {
           const added = userLanguages.has(lang.code);
           return (
             <button

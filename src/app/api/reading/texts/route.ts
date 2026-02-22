@@ -5,11 +5,13 @@ import { ReadingSessionRepository } from '@/features/reading/infrastructure/driz
 import { db } from '@/infrastructure/db/client';
 import { apiErrorHandler } from '@/shared/lib/api-error-handler';
 import { UnauthorizedError } from '@/shared/lib/errors';
+import { getTenantFromRequest } from '@/shared/lib/require-tenant';
 
 import { getReadingAuthUser } from '../get-auth-user';
 
 export async function GET(req: NextRequest) {
   try {
+    await getTenantFromRequest(req);
     const user = await getReadingAuthUser(req);
     if (!user) {
       throw new UnauthorizedError(
@@ -18,9 +20,13 @@ export async function GET(req: NextRequest) {
       );
     }
 
+    const language = req.nextUrl.searchParams.get('language') ?? undefined;
+    const level = req.nextUrl.searchParams.get('level') ?? undefined;
     const useCase = makeGetReadingTextListUseCase();
-    const result = await useCase.execute(user.id);
-
+    const result = await useCase.execute(user.id, {
+      languageCode: language,
+      level,
+    });
     const texts =
       result.kind === 'cached'
         ? (JSON.parse(result.body) as { texts: Array<{ id: string }> }).texts

@@ -23,7 +23,8 @@ These apply to ALL content generation:
 
 ### Language Pair Context
 - **Target Language:** `{targetLanguage}` — the language being learned
-- **Native Language:** `{nativeLanguage}` — the learner's L1 (used for translations, error prediction, cultural contrast)
+- **Native Language:** `{nativeLanguage}` — the learner's L1 (used for translations, error prediction, cultural contrast). When nativeLanguage equals targetLanguage (immersion mode), see below.
+{immersionModeNote}
 
 ### L1 Interference Awareness
 Always consider how `{nativeLanguage}` speakers specifically struggle with `{targetLanguage}`:
@@ -33,11 +34,24 @@ Always consider how `{nativeLanguage}` speakers specifically struggle with `{tar
 - Prosody/intonation transfer
 - Cultural communication style differences
 
+### Target-Language-Specific Pedagogy
+The **target language** (`{targetLanguage}`) determines which grammatical and phonological features are in scope. Do NOT transfer English-specific concepts to other languages.
+
+- **English:** Present Perfect vs Simple Past; phrasal verbs; chunks and formulaic language are central. Use the level's phrasal_verb_density and chunk instructions as given.
+- **Portuguese:** No Present Perfect equivalent like English; use futuro do pretérito, mesóclise (pronoun placement) where relevant. Distinguish pt-BR vs pt-PT if a regional variant is specified.
+- **Spanish:** Ser vs estar (rules differ from Portuguese); subjuntivo in daily use. Distinguish Spain (vosotros) vs Latin America (vos, ustedes); pretérito indefinido vs perfecto by region.
+- **French:** Passé composé vs imparfait; liaison and elision; ne...pas negation. No "phrasal verbs" as in English; use formulaic language appropriate to French.
+- **German:** Four cases (Nominativ, Akkusativ, Dativ, Genitiv); verb position (e.g. verb-final in subordinate clauses); separable verbs; three genders (der/die/das); Perfekt usage.
+- **Italian:** Pro-drop; congiuntivo (subjunctive); regional pronunciation when relevant.
+
+**Regional variant:** When the spec includes a regional variant (e.g. pt-BR, pt-PT, en-US, en-GB, es-ES, es-MX), all examples, chunks, and cultural notes must match that variant. Do not mix variants.
+
 ### Naturalness Constraint
 - A1-A2: Use only top-1000 frequency words (with exceptions for theme-specific vocabulary)
 - B1-B2: Use top-3000 frequency words + domain-specific vocabulary
 - C1-C2: No frequency restriction, but prioritize contemporary spoken language over literary/archaic forms
-- ALL LEVELS: Prefer phrasal verbs and colloquial forms over Latinate/formal equivalents when representing spoken language
+- When **target language is English:** prefer phrasal verbs and colloquial forms over Latinate/formal equivalents when representing spoken language.
+- When **target language is not English:** use the natural spoken structures of that language (e.g. fixed expressions, verb framing, register-appropriate forms). Do NOT transfer English-specific concepts (e.g. "phrasal verbs" as a category) to languages that do not have them; use equivalent formulaic or multi-word patterns appropriate to that language.
 
 ### Content Tone
 - Engaging, slightly provocative, never boring
@@ -88,7 +102,7 @@ Every module must define:
 |-----------|----|----|----|----|----|----|
 | Max sentence length (words) | 8 | 12 | 18 | 25 | ∞ | ∞ |
 | Clause complexity | Simple | Simple + coordinated | Subordinated | Multi-clause | Nested | Unrestricted |
-| Phrasal verb density | 1-2 per dialogue | 3-5 per dialogue | 5-8 per dialogue | 8-12 per dialogue | High | Native density |
+| Phrasal verb density (English) / equivalent formulaic density (other languages) | 1-2 per dialogue | 3-5 per dialogue | 5-8 per dialogue | 8-12 per dialogue | High | Native density |
 | Idiomatic density | 0-1 per text | 1-3 per text | 3-5 per text | 5-8 per text | 8-12 per text | Native density |
 | Lexical band | Top 500 | Top 1000 | Top 2000 | Top 3000 | Top 5000+ | Unrestricted |
 | Filler/hesitation frequency | Rare, modeled | Occasional | Natural | Native rate | Native rate | Native rate |
@@ -97,6 +111,20 @@ Every module must define:
 ## OUTPUT FORMAT
 
 ALL content must be returned as **valid JSON** matching the platform schema for the specific feature (lesson, reading, podcast, speaking). No markdown wrapping, no prose explanations — just the JSON object.
+
+## VALIDATION IS FINAL — NO NEGOTIATION
+
+**You have one chance.** The platform runs strict validation after your response. If you return content that does not meet the exact numeric and structural requirements (minimum exercises, minimum CONCEPT sections, minimum chunk coverage %, exactly 10 questions, word count in range, etc.), the output is **REJECTED**. There is no "close enough". Content is not saved; subsequent passes are skipped; tokens and cost are wasted.
+
+- **Lesson:** Generate at least the **minimum number of exercises** and **minimum CONCEPT sections** for the level. Count before returning. If the prompt says "at least 12 exercises", 11 is a FAIL.
+- **Reading:** Use at least **60% of the lesson chunks** in `chunks_used` (exact minimum is given in context). Fewer = FAIL. Plan which chunk IDs you will use before writing the text.
+- **Podcast / Speaking:** Meet the exact counts specified in the pass prompt.
+
+Do not negotiate, approximate, or leave items "for later". Generate the full required set in one response.
+
+## VALIDATION RULES ARE LANGUAGE-AGNOSTIC
+
+Numeric and structural requirements (e.g. minimum chunk coverage %, exact question counts, word count ranges) apply to **every target language**. They do not change for French, Spanish, German, or any other language. If a pass specifies "use at least 60% of chunks" or "exactly 10 questions", you must meet that regardless of the language you are generating. Failing to meet these targets causes validation FAIL.
 
 ## QUALITY GATES (Self-Check Before Output)
 

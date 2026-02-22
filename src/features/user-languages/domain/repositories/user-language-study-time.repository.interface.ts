@@ -18,4 +18,10 @@ export interface IUserLanguageStudyTimeRepository {
     date: string,
     data: { minutesStudied: number; activitiesCompleted: number },
   ): Promise<void>;
+
+  /** Sum of minutes studied for a user and language (all time). */
+  totalMinutesByUserAndLanguage(
+    userId: string,
+    language: string,
+  ): Promise<number>;
 }

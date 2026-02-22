@@ -10,8 +10,8 @@ import { LanguageSelect } from '@/components/language-select';
 import { useProgress } from '@/hooks/use-progress';
 import { useTranslate } from '@/locales';
 import { useAuth } from '@/providers/auth-provider';
-
 import { useClickAway } from '../../hooks/use-click-away';
+import { useAccountManageModal } from './account-manage-modal-provider';
 
 function formatXp(xp: number): string {
   return xp.toLocaleString();
@@ -31,6 +31,7 @@ export function ProfileMenu() {
   const { t } = useTranslate();
   const router = useRouter();
   const { logout } = useAuth();
+  const { openAccountModal } = useAccountManageModal();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -51,6 +52,11 @@ export function ProfileMenu() {
     setOpen(false);
     await logout();
     router.replace('/login');
+  };
+
+  const handleManageAccount = () => {
+    setOpen(false);
+    openAccountModal();
   };
 
   const displayName = user?.name ?? t('dashboard.guestUser');
@@ -110,6 +116,17 @@ export function ProfileMenu() {
               </p>
             </div>
           )}
+          <div className="border-b border-(--border) px-2 py-1">
+            <button
+              type="button"
+              role="menuitem"
+              onClick={handleManageAccount}
+              className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-(--text) transition hover:bg-(--bg-elevated)"
+            >
+              <span aria-hidden>⚙️</span>
+              {t('profile.manageAccount')}
+            </button>
+          </div>
           <div className="border-b border-(--border) px-3 pb-2 pt-2">
             <span className="text-xs font-semibold uppercase tracking-wider text-(--text-dim)">
               {t('profile.language')}

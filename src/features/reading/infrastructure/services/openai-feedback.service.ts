@@ -5,6 +5,88 @@ import type {
   IFeedbackAIService,
 } from '@/features/reading/domain/ports/feedback-ai-service.interface';
 
+function getSpeedLabel(wpm: number): string {
+  if (wpm < 80) return 'slow';
+  if (wpm > 160) return 'fast';
+  return 'comfortable';
+}
+
+function getClarityLabel(accuracy: number): string {
+  if (accuracy > 90) return 'very clear';
+  if (accuracy > 70) return 'mostly clear with some blurriness';
+  return 'needs clearer articulation';
+}
+
+function getRedWords(stats: FeedbackStats, limit: number): string[] {
+  return stats.wordScores
+    .filter((w) => w.status === 'red' && w.expected)
+    .map((w) => w.expected as string)
+    .filter((v, i, a) => a.indexOf(v) === i)
+    .slice(0, limit);
+}
+
+function buildFallbackTips(stats: FeedbackStats): string[] {
+  const tips: string[] = [];
+  if (stats.redCount > 0) {
+    tips.push(
+      'Practice the red words by clicking them to hear correct pronunciation.',
+    );
+  }
+  if (stats.yellowCount > 0) {
+    tips.push('The yellow words are close — try articulating more clearly.');
+  }
+  if (stats.missedCount > 0) {
+    tips.push('Try to read every word; skip less next time.');
+  }
+  return tips;
+}
+
+function buildFallbackResult(
+  stats: FeedbackStats,
+  accuracy: number,
+  redWords: string[],
+  intonation: string,
+): FeedbackResult {
+  return {
+    summary: `You read at ${stats.wpm} WPM with ${accuracy.toFixed(0)}% accuracy.`,
+    tips: buildFallbackTips(stats),
+    focusWords: redWords,
+    nextSteps: [],
+    speed: getSpeedLabel(stats.wpm),
+    clarity: getClarityLabel(accuracy),
+    intonation,
+  };
+}
+
+function sanitizeAiResult(
+  data: FeedbackResult,
+  stats: FeedbackStats,
+  accuracy: number,
+  redWords: string[],
+): FeedbackResult {
+  const focusWords = Array.isArray(data.focusWords)
+    ? data.focusWords
+    : redWords.slice(0, 8);
+  const tips = Array.isArray(data.tips) ? data.tips : [];
+  const nextSteps = Array.isArray(data.nextSteps) ? data.nextSteps : [];
+  return {
+    ...data,
+    focusWords,
+    tips,
+    nextSteps,
+    speed: data.speed ?? getSpeedLabel(stats.wpm),
+    clarity: data.clarity ?? getClarityLabel(accuracy),
+    intonation:
+      data.intonation ?? 'natural overall with room for expressiveness',
+  };
+}
+
+function logDebug(label: string, message: string): void {
+  if (process.env.DEBUG_READING_TRANSCRIPT === '1') {
+    console.info(`[Reading][Feedback] ${label} ${message}`);
+  }
+}
+
 export class OpenAIFeedbackService implements IFeedbackAIService {
   constructor(private readonly apiKey: string) {}
 
@@ -13,53 +95,22 @@ export class OpenAIFeedbackService implements IFeedbackAIService {
     const total =
       stats.greenCount + stats.yellowCount + stats.redCount + stats.missedCount;
     const accuracy = total > 0 ? (stats.greenCount / total) * 100 : 0;
-
-    const redWords = stats.wordScores
-      .filter((w) => w.status === 'red' && w.expected)
-      .map((w) => w.expected as string)
-      .filter((v, i, a) => a.indexOf(v) === i)
-      .slice(0, 8);
+    const redWords = getRedWords(stats, 8);
 
     if (!this.apiKey) {
-      const duration = Date.now() - overallStart;
-      if (process.env.DEBUG_READING_TRANSCRIPT === '1') {
-        console.info(
-          `[Reading][Feedback] Using fallback feedback (no API key). Completed in ${duration}ms`,
-        );
-      }
-      return {
-        summary: `You read at ${stats.wpm} WPM with ${accuracy.toFixed(0)}% accuracy.`,
-        tips: [
-          stats.redCount > 0
-            ? 'Practice the red words by clicking them to hear correct pronunciation.'
-            : '',
-          stats.yellowCount > 0
-            ? 'The yellow words are close — try articulating more clearly.'
-            : '',
-          stats.missedCount > 0
-            ? 'Try to read every word; skip less next time.'
-            : '',
-        ].filter(Boolean),
-        focusWords: redWords,
-        nextSteps: [],
-        speed:
-          stats.wpm < 80 ? 'slow' : stats.wpm > 160 ? 'fast' : 'comfortable',
-        clarity:
-          accuracy > 90
-            ? 'very clear'
-            : accuracy > 70
-              ? 'mostly clear with some blurriness'
-              : 'needs clearer articulation',
-        intonation: 'not evaluated (AI feedback disabled)',
-      };
+      logDebug(
+        'Using fallback feedback (no API key). Completed in',
+        `${Date.now() - overallStart}ms`,
+      );
+      return buildFallbackResult(
+        stats,
+        accuracy,
+        redWords,
+        'not evaluated (AI feedback disabled)',
+      );
     }
 
-    const redWordsForPrompt = stats.wordScores
-      .filter((w) => w.status === 'red' && w.expected)
-      .map((w) => w.expected as string)
-      .filter((v, i, a) => a.indexOf(v) === i)
-      .slice(0, 10);
-
+    const redWordsForPrompt = getRedWords(stats, 10);
     const openai = new OpenAI({ apiKey: this.apiKey });
     const openAiStart = Date.now();
     const completion = await openai.chat.completions.create({
@@ -81,12 +132,10 @@ export class OpenAIFeedbackService implements IFeedbackAIService {
       temperature: 0.5,
       max_tokens: 400,
     });
-    const openAiDuration = Date.now() - openAiStart;
-    if (process.env.DEBUG_READING_TRANSCRIPT === '1') {
-      console.info(
-        `[Reading][Feedback] OpenAI gpt-4o-mini completed in ${openAiDuration}ms (level=${stats.level}, wpm=${stats.wpm})`,
-      );
-    }
+    logDebug(
+      'OpenAI gpt-4o-mini completed in',
+      `${Date.now() - openAiStart}ms (level=${stats.level}, wpm=${stats.wpm})`,
+    );
 
     const raw = completion.choices[0]?.message?.content?.trim() ?? '{}';
     const cleaned = raw.replace(/^```json\s*/i, '').replace(/\s*```$/i, '');
@@ -101,31 +150,12 @@ export class OpenAIFeedbackService implements IFeedbackAIService {
         nextSteps: [],
       };
     }
-    if (!Array.isArray(data.focusWords)) data.focusWords = redWords.slice(0, 8);
-    if (!Array.isArray(data.tips)) data.tips = [];
-    if (!Array.isArray(data.nextSteps)) data.nextSteps = [];
-    // Ensure qualitative fields are always present for consumers.
-    if (!data.speed) {
-      data.speed =
-        stats.wpm < 80 ? 'slow' : stats.wpm > 160 ? 'fast' : 'comfortable';
-    }
-    if (!data.clarity) {
-      data.clarity =
-        accuracy > 90
-          ? 'very clear'
-          : accuracy > 70
-            ? 'mostly clear with some blurriness'
-            : 'needs clearer articulation';
-    }
-    if (!data.intonation) {
-      data.intonation = 'natural overall with room for expressiveness';
-    }
-    const duration = Date.now() - overallStart;
-    if (process.env.DEBUG_READING_TRANSCRIPT === '1') {
-      console.info(
-        `[Reading][Feedback] generateFeedback total ${duration}ms (tips=${data.tips.length}, focusWords=${data.focusWords.length})`,
-      );
-    }
-    return data;
+
+    const result = sanitizeAiResult(data, stats, accuracy, redWords);
+    logDebug(
+      'generateFeedback total',
+      `${Date.now() - overallStart}ms (tips=${result.tips.length}, focusWords=${result.focusWords.length})`,
+    );
+    return result;
   }
 }

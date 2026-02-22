@@ -8,11 +8,13 @@ import {
   UnauthorizedError,
 } from '@/shared/lib/errors';
 import { checkRateLimit } from '@/shared/lib/reading/rate-limit';
+import { getTenantFromRequest } from '@/shared/lib/require-tenant';
 
 import { getReadingAuthUser } from '../get-auth-user';
 
 export async function POST(req: NextRequest) {
   try {
+    await getTenantFromRequest(req);
     const user = await getReadingAuthUser(req);
     if (!user) {
       throw new UnauthorizedError(

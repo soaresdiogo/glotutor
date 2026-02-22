@@ -4,6 +4,7 @@ import { makeGetExerciseResultsUseCase } from '@/features/listening/application/
 import { ExerciseResultsPresenter } from '@/features/listening/infrastructure/presenters/exercise-results.presenter';
 import { apiErrorHandler } from '@/shared/lib/api-error-handler';
 import { UnauthorizedError } from '@/shared/lib/errors';
+import { getTenantFromRequest } from '@/shared/lib/require-tenant';
 
 import { getListeningAuthUser } from '../../../../get-auth-user';
 
@@ -12,6 +13,7 @@ export async function GET(
   { params }: { params: Promise<{ podcastId: string }> },
 ) {
   try {
+    await getTenantFromRequest(req);
     const user = await getListeningAuthUser(req);
     if (!user) {
       throw new UnauthorizedError(

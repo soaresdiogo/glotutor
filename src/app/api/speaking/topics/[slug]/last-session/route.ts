@@ -5,6 +5,7 @@ import { SpeakingSessionRepository } from '@/features/speaking/infrastructure/dr
 import { db } from '@/infrastructure/db/client';
 import { apiErrorHandler } from '@/shared/lib/api-error-handler';
 import { BadRequestError, UnauthorizedError } from '@/shared/lib/errors';
+import { getTenantFromRequest } from '@/shared/lib/require-tenant';
 
 import { getSpeakingAuthUser } from '../../../get-auth-user';
 
@@ -17,6 +18,7 @@ export async function GET(
   { params }: { params: Promise<{ slug: string }> },
 ) {
   try {
+    await getTenantFromRequest(req);
     const user = await getSpeakingAuthUser(req);
     if (!user) {
       throw new UnauthorizedError(
@@ -30,8 +32,9 @@ export async function GET(
       throw new BadRequestError('Missing slug.', 'speaking.api.missingSlug');
     }
 
+    const language = req.nextUrl.searchParams.get('language') ?? undefined;
     const getTopic = makeGetSpeakingTopicUseCase();
-    const topic = await getTopic.execute(user.id, slug);
+    const topic = await getTopic.execute(user.id, slug, { language });
     if (!topic) {
       return Response.json({
         sessionId: null,

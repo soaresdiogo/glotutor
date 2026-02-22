@@ -11,12 +11,16 @@
 These are **MANDATORY** — failure to meet ANY of these = FAILED validation:
 
 1. ✅ **EXACTLY 10 comprehension questions** — not 9, not 11, EXACTLY 10
-2. ✅ **Minimum 60% chunk coverage** — You will receive N chunks from Pass 1. Use AT LEAST 60% of them (round up)
+2. ✅ **Minimum 60% chunk coverage** — You will receive N chunks from Pass 1. Use AT LEAST 60% of them (round up). **Formula: minimum_required = ceil(N × 0.6).** If you use fewer, the output will be REJECTED.
 3. ✅ **Word count within CEFR range** — See table below, NO exceptions
 4. ✅ **Narrative text format ONLY** — NO social media, NO chats, NO fragmented formats
 5. ✅ **Natural paragraph structure** — Flowing prose with proper paragraph breaks
 
-**EXAMPLE:** If Pass 1 provides 15 chunks, you MUST use at least 9 chunks (60% of 15 = 9).
+**CHUNK COVERAGE — NON-NEGOTIABLE (ALL LANGUAGES):**
+- This rule applies to **every target language** (English, French, Spanish, German, Italian, Portuguese, etc.). The language does NOT change the requirement.
+- You will see **CHUNK COVERAGE TARGET** at the top of the context with exact numbers: `minimum_chunks_required` and total chunks. **Your `chunks_used` array MUST have length ≥ minimum_chunks_required.** If it has fewer, the output is REJECTED. No exceptions.
+- Example: 25 chunks → minimum_required = 15 (ceil(25×0.6)). You MUST list at least 15 chunk IDs in `chunks_used`. Returning 9/25 = 36% = FAIL.
+- **Workflow: (1) Read the chunk list and the required minimum. (2) Choose at least that many chunk IDs. (3) Write the narrative weaving those chunks in. (4) Set reading_text.chunks_used to exactly that list.** Do not write the text first and then try to fill chunks_used — you will under-use and fail.
 
 ---
 
@@ -52,10 +56,13 @@ These are **MANDATORY** — failure to meet ANY of these = FAILED validation:
 
 ### 1. READING TEXT — NARRATIVE FORMAT ONLY
 
-**STEP 1: Count the chunks**
-- You will receive `total_chunks` from Pass 1
-- Calculate: `minimum_required = ceil(total_chunks * 0.6)`
-- Track which chunks you use: `chunks_used: ["chunk_001", "chunk_005", ...]`
+**STEP 0 — PLAN FIRST (MANDATORY — DO NOT SKIP):**
+- At the top of this request you will see **CHUNK COVERAGE TARGET (REQUIRED)** with two numbers: total chunks (e.g. 25) and **minimum_chunks_required** (e.g. 15). That minimum is **non-negotiable**. If you return fewer than that many IDs in `chunks_used`, validation FAILS and the content is rejected.
+- **Before writing a single word of narrative:** decide exactly which chunk IDs you will use. You MUST use at least `minimum_chunks_required` IDs. Write them down (e.g. chunk_001, chunk_003, …). Then write the narrative so it naturally uses those chunks. Then set `reading_text.chunks_used` to that exact list. **Writing the text first and then filling chunks_used causes under-coverage and FAIL.**
+
+**STEP 1: Select chunks (use the numbers from CHUNK COVERAGE TARGET)**
+- The chunk list from Pass 1 is in the context block. The required minimum is already calculated (e.g. "at least 15 chunk IDs (out of 25 available)").
+- Choose **at least** that many chunk IDs. Put exactly that list (or more) in `chunks_used`. **Length of chunks_used MUST be ≥ minimum_chunks_required.** Example: for 25 chunks, minimum is 15; 9 or 10 in chunks_used = FAIL.
 
 **STEP 2: Create narrative text that:**
 
@@ -92,24 +99,24 @@ These are **MANDATORY** — failure to meet ANY of these = FAILED validation:
     }
   }
 }
-```
+**CRITICAL:** `chunks_used` length MUST be ≥ ceil(total_available × 0.6). Otherwise validation FAILS.
 
 ---
 
 ## WORD COUNT GUIDELINES BY CEFR LEVEL
 
-**STRICT ENFORCEMENT** — These are hard limits:
+**STRICT ENFORCEMENT — MANDATORY.** The exact range for this run is in **LEVEL CONFIGURATION** below as `reading.word_count.min` and `reading.word_count.max`. You MUST stay within that range. Generating below the minimum = FAILED validation.
 
-| CEFR Level | Word Count Range | Typical Structure |
-|------------|------------------|-------------------|
-| **A1** | 80-120 words | 2-3 short paragraphs |
-| **A2** | 120-180 words | 3-4 paragraphs |
-| **B1** | 180-250 words | 4-5 paragraphs |
-| **B2** | 250-350 words | 5-6 paragraphs |
-| **C1** | 350-500 words | 6-8 paragraphs |
-| **C2** | 500-700 words | 8-10 paragraphs |
+| CEFR Level | Word Count Range (from 01-LEVEL-PARAMS) | Typical Structure |
+|------------|----------------------------------------|-------------------|
+| **A1** | 100-300 words | 2-4 short paragraphs |
+| **A2** | 200-500 words | 3-5 paragraphs |
+| **B1** | 400-800 words | 4-6 paragraphs |
+| **B2** | 600-1200 words | 5-8 paragraphs |
+| **C1** | 800-1500 words | 6-10 paragraphs |
+| **C2** | 1000-2000 words | 8-12 paragraphs |
 
-⚠️ **CRITICAL:** A 300-word text for A1 learners = FAILED validation.
+⚠️ **CRITICAL:** For this run the injected range is **min: {min}, max: {max}**. Your `reading_text.word_count` MUST be ≥ {min} and ≤ {max}. No exceptions.
 
 ---
 
@@ -227,12 +234,15 @@ Generate **5-8 pronunciation focus points**:
 }
 ```
 
-**For Portuguese speakers learning English, prioritize:**
-- /θ/ (think), /ð/ (the) — don't exist in Portuguese
-- /ɹ/ (red) — different from Portuguese /r/
-- Connected speech: "can I" → /kənaɪ/, "gimme" /ˈgɪmi/
-- Final consonants (Portuguese often adds vowel)
-- Word stress differences
+**Pronunciation focus must be specific to the pair {nativeLanguage} → {targetLanguage}:**
+
+- For **Portuguese** speakers learning **English:** e.g. /θ/, /ð/, /ɹ/, final consonants, word stress; connected speech like "can I" → /kənaɪ/, "gimme".
+- For **English** speakers learning **Spanish:** e.g. trilled /r/, /θ/ vs /s/ (Spain), vowel length, stress.
+- For **Portuguese/Spanish** speakers learning **French:** liaison, elision, nasal vowels, silent endings.
+- For **Portuguese/English** speakers learning **German:** umlauts, final devoicing, compound stress, rhythm.
+- For any L1 learning **Italian:** double consonants, open/close e/o, regional variants if specified.
+
+Always set `for_native_speakers_of` to `{nativeLanguage}` and explain WHY each sound or pattern is hard for that L1 when learning `{targetLanguage}`. Do not give generic tips.
 
 ---
 
@@ -308,10 +318,10 @@ Return this EXACT structure:
 
 ## PRE-SUBMISSION VALIDATION CHECKLIST
 
-**Before returning your JSON, verify:**
+**Before returning your JSON, verify (failure on any = rejected output):**
 
-- [ ] Counted total chunks from Pass 1
-- [ ] Used ≥60% of chunks (check: `chunks_used.length / total_chunks >= 0.6`)
+- [ ] Read **CHUNK COVERAGE TARGET** at the top: noted total_chunks and minimum_chunks_required.
+- [ ] **chunks_used.length >= minimum_chunks_required.** If you have fewer IDs in chunks_used than the required minimum, add more chunks to the narrative and to chunks_used. Example: 25 chunks → need 15 in chunks_used; 9 = FAIL.
 - [ ] Word count within CEFR range for this level
 - [ ] Text format is narrative (NOT social media/chat)
 - [ ] **Counted comprehension questions = EXACTLY 10**
@@ -325,7 +335,7 @@ Return this EXACT structure:
 ## CRITICAL REMINDERS
 
 ### ✅ DO:
-1. **Count chunks carefully** — if you get 15 chunks, use at least 9 (60%)
+1. **Meet chunk coverage first** — Use the **CHUNK COVERAGE TARGET** numbers at the top. Before writing narrative, choose at least minimum_chunks_required chunk IDs, then write the text, then set chunks_used to that list. For 25 chunks you need at least 15 in chunks_used; for 20 chunks at least 12. Fewer = FAIL.
 2. **Generate EXACTLY 10 questions** — count them as you write
 3. **Stay within word count** — for A1, keep it 80-120 words
 4. **Write flowing narrative** — proper paragraphs, not fragments
@@ -333,10 +343,10 @@ Return this EXACT structure:
 
 ### ❌ DON'T:
 1. ❌ Generate 8 questions or 12 questions — must be EXACTLY 10
-2. ❌ Use only 4/15 chunks when you need 9+ — track coverage
+2. ❌ Return fewer than ceil(total_chunks×0.6) in chunks_used — e.g. 9/20 = 45% will FAIL. You need at least 12 for 20 chunks. This applies in French, Spanish, and every other target language.
 3. ❌ Write 300 words for A1 — respect CEFR ranges
 4. ❌ Use chat/social media formats — narrative text only
-5. ❌ Give generic pronunciation tips — explain WHY it's hard for Portuguese speakers
+5. ❌ Give generic pronunciation tips — explain WHY it's hard for the learner's L1
 
 ---
 

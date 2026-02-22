@@ -17,14 +17,31 @@ const GRAMMAR_TERMS = [
   'declension',
 ];
 
-export function validateLessonOutput(
-  output: { content?: Record<string, unknown> },
-  moduleSpec: ModuleSpec,
-): ValidationResult {
-  const errors: string[] = [];
-  const warnings: string[] = [];
-  const content = output.content ?? {};
+/** Exported so prompt-composer can inject level-specific minimums into lesson prompt. */
+export const MIN_SECTIONS_BY_LEVEL: Record<string, number> = {
+  A1: 8,
+  A2: 10,
+  B1: 10,
+  B2: 10,
+  C1: 12,
+  C2: 14,
+};
 
+/** Exported so prompt-composer can inject level-specific minimums into lesson prompt. */
+export const MIN_EXERCISES_BY_LEVEL: Record<string, number> = {
+  A1: 10,
+  A2: 10,
+  B1: 10,
+  B2: 10,
+  C1: 10,
+  C2: 10,
+};
+
+function validateChunkCount(
+  content: Record<string, unknown>,
+  moduleSpec: ModuleSpec,
+  errors: string[],
+): number {
   const chunkCount =
     (content.chunks as unknown[])?.length ??
     (content.high_frequency_chunks as unknown[])?.length ??
@@ -36,19 +53,29 @@ export function validateLessonOutput(
   if (minChunks && chunkCount < minChunks.min) {
     errors.push(`Chunk count ${chunkCount} below minimum ${minChunks.min}`);
   }
+  return chunkCount;
+}
 
-  // Only check learner-visible content for grammar terms; internal labels (e.g. pattern_label from level config) may contain them
+function validateGrammarTerms(
+  content: Record<string, unknown>,
+  errors: string[],
+): void {
   const contentForGrammarCheck = { ...content };
   delete (contentForGrammarCheck as Record<string, unknown>).grammar_patterns;
-  const textContent = JSON.stringify(contentForGrammarCheck);
+  const textContent = JSON.stringify(contentForGrammarCheck).toLowerCase();
   for (const term of GRAMMAR_TERMS) {
-    if (textContent.toLowerCase().includes(term)) {
+    if (textContent.includes(term)) {
       errors.push(
         `Grammar terminology detected: "${term}" — grammar must be invisible`,
       );
     }
   }
+}
 
+function validateSpeechMap(
+  content: Record<string, unknown>,
+  errors: string[],
+): void {
   const speechMap = (content.speech_map ?? content.module_speech_map) as
     | { reductions?: unknown[] }
     | undefined;
@@ -57,96 +84,120 @@ export function validateLessonOutput(
       'No connected speech features found — every module must include speech mapping',
     );
   }
+}
 
+function validateAdaptiveAndCognitive(
+  content: Record<string, unknown>,
+  errors: string[],
+  warnings: string[],
+): void {
   if (!content.adaptive_metadata) {
     errors.push('Missing adaptive metadata');
   }
-
   const cognitive = content.cognitive_reinforcement as
     | { identity_shift?: unknown }
     | undefined;
   if (!cognitive?.identity_shift) {
     warnings.push('Missing identity shift definition');
   }
+}
 
+function validateMistakesL1(
+  content: Record<string, unknown>,
+  moduleSpec: ModuleSpec,
+  warnings: string[],
+): void {
   const mistakes = content.mistakes as
     | Array<{ why_wrong?: string }>
     | undefined;
-  if (mistakes?.length) {
-    const nativeLang = moduleSpec.nativeLanguage;
-    const genericCount = mistakes.filter(
-      (m) =>
-        !(m.why_wrong?.includes(nativeLang) ?? false) &&
-        !(m.why_wrong?.toLowerCase().includes('speakers of') ?? false),
-    ).length;
-    if (genericCount > mistakes.length * 0.5) {
-      warnings.push(
-        'More than 50% of mistakes appear generic — should be L1-specific',
-      );
-    }
+  if (!mistakes?.length) return;
+  const nativeEqualsTarget =
+    moduleSpec.nativeLanguage === moduleSpec.targetLanguage;
+  if (nativeEqualsTarget) return;
+  const nativeLang = moduleSpec.nativeLanguage;
+  const genericCount = mistakes.filter(
+    (m) =>
+      !(m.why_wrong?.includes(nativeLang) ?? false) &&
+      !(m.why_wrong?.toLowerCase().includes('speakers of') ?? false),
+  ).length;
+  if (genericCount > mistakes.length * 0.5) {
+    warnings.push(
+      'More than 50% of mistakes appear generic — should be L1-specific',
+    );
   }
+}
 
-  // --- CONCEPT sections validation ---
+function validateConceptSections(
+  content: Record<string, unknown>,
+  moduleSpec: ModuleSpec,
+  chunkCount: number,
+  errors: string[],
+  warnings: string[],
+): void {
   const sections =
     (content.sections as Array<{
       type?: string;
       content?: { examples?: unknown[] };
     }>) ?? [];
   const conceptSections = sections.filter((s) => s.type === 'CONCEPT');
-
-  const minSectionsByLevel: Record<string, number> = {
-    A1: 8,
-    A2: 10,
-    B1: 10,
-    B2: 10,
-    C1: 12,
-    C2: 14,
-  };
-  const minSections = minSectionsByLevel[moduleSpec.cefrLevel] ?? 8;
+  const levelKey = (moduleSpec.cefrLevel ?? 'A1').toString().toUpperCase();
+  const minSections = MIN_SECTIONS_BY_LEVEL[levelKey] ?? 8;
 
   if (conceptSections.length < minSections) {
     errors.push(
-      `Only ${conceptSections.length} CONCEPT sections — minimum ${minSections} required for ${moduleSpec.cefrLevel}`,
+      `Only ${conceptSections.length} CONCEPT sections — minimum ${minSections} required for ${levelKey}`,
     );
   }
 
   const totalExamples = conceptSections.reduce((sum, s) => {
     return sum + ((s.content?.examples as unknown[])?.length ?? 0);
   }, 0);
-
   if (chunkCount > 0 && totalExamples < chunkCount * 0.8) {
     warnings.push(
       `Only ${totalExamples} examples across ${conceptSections.length} sections — should cover at least 80% of ${chunkCount} chunks`,
     );
   }
 
-  for (let i = 0; i < conceptSections.length; i++) {
-    const section = conceptSections[i];
+  conceptSections.forEach((section, i) => {
     const exampleCount = (section.content?.examples as unknown[])?.length ?? 0;
     if (exampleCount < 2) {
       warnings.push(
         `Section ${i + 1} has only ${exampleCount} example(s) — minimum 2 per section`,
       );
     }
-  }
+  });
+}
 
-  // --- Exercises count validation ---
+function validateExercisesCount(
+  content: Record<string, unknown>,
+  moduleSpec: ModuleSpec,
+  errors: string[],
+): void {
   const exercises = (content.exercises as unknown[]) ?? [];
-  const minExercisesByLevel: Record<string, number> = {
-    A1: 10,
-    A2: 12,
-    B1: 14,
-    B2: 16,
-    C1: 16,
-    C2: 18,
-  };
-  const minExercises = minExercisesByLevel[moduleSpec.cefrLevel] ?? 10;
-
+  const levelKey = (moduleSpec.cefrLevel ?? 'A1').toString().toUpperCase();
+  const minExercises = MIN_EXERCISES_BY_LEVEL[levelKey] ?? 10;
   if (exercises.length < minExercises) {
     errors.push(
-      `Only ${exercises.length} exercises — minimum ${minExercises} required for ${moduleSpec.cefrLevel}`,
+      `Only ${exercises.length} exercises — minimum ${minExercises} required for ${levelKey}`,
     );
   }
+}
+
+export function validateLessonOutput(
+  output: { content?: Record<string, unknown> },
+  moduleSpec: ModuleSpec,
+): ValidationResult {
+  const errors: string[] = [];
+  const warnings: string[] = [];
+  const content = output.content ?? {};
+
+  const chunkCount = validateChunkCount(content, moduleSpec, errors);
+  validateGrammarTerms(content, errors);
+  validateSpeechMap(content, errors);
+  validateAdaptiveAndCognitive(content, errors, warnings);
+  validateMistakesL1(content, moduleSpec, warnings);
+  validateConceptSections(content, moduleSpec, chunkCount, errors, warnings);
+  validateExercisesCount(content, moduleSpec, errors);
 
   return {
     passed: errors.length === 0,

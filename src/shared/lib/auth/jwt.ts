@@ -152,3 +152,54 @@ export async function verifyToken(
 
   return { payload: payload as unknown as TokenPayload };
 }
+
+const PAYMENT_LINK_AUDIENCE = 'glotutor/payment-link';
+const PAYMENT_LINK_EXPIRATION = '1h';
+
+export type PaymentLinkTokenPayload = {
+  type: 'payment-link';
+  email: string;
+  fullName: string;
+  planType: string;
+  iat: number;
+  exp: number;
+  iss: string;
+  aud: string;
+};
+
+export async function signPaymentLinkToken(payload: {
+  email: string;
+  fullName: string;
+  planType: string;
+}): Promise<string> {
+  const { privateKey } = await getKeyPair();
+  const iss = (env as { JWT_ISSUER?: string }).JWT_ISSUER ?? 'glotutor';
+
+  return new jose.SignJWT({
+    type: 'payment-link',
+    email: payload.email.toLowerCase(),
+    fullName: payload.fullName,
+    planType: payload.planType,
+  })
+    .setProtectedHeader({ alg: 'RS256', typ: 'JWT' })
+    .setIssuer(iss)
+    .setAudience(PAYMENT_LINK_AUDIENCE)
+    .setSubject(payload.email.toLowerCase())
+    .setIssuedAt()
+    .setExpirationTime(PAYMENT_LINK_EXPIRATION)
+    .sign(privateKey);
+}
+
+export async function verifyPaymentLinkToken(
+  token: string,
+): Promise<{ payload: PaymentLinkTokenPayload }> {
+  const { publicKey } = await getKeyPair();
+  const iss = (env as { JWT_ISSUER?: string }).JWT_ISSUER ?? 'glotutor';
+
+  const { payload } = await jose.jwtVerify(token, publicKey, {
+    issuer: iss,
+    audience: PAYMENT_LINK_AUDIENCE,
+  });
+
+  return { payload: payload as unknown as PaymentLinkTokenPayload };
+}

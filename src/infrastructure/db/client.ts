@@ -8,5 +8,11 @@ const connectionString =
 
 const pool = new Pool({ connectionString });
 
-export const db = drizzle({ client: pool, schema });
+const isDevelopment = process.env.NODE_ENV === 'development';
+
+export const db = drizzle({
+  client: pool,
+  schema,
+  logger: isDevelopment,
+});
 export type DbClient = typeof db;

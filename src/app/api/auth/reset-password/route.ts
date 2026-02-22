@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import { ResetPasswordWithTokenSchema } from '@/features/auth/application/dto/reset-password-with-token.dto';
 import { makeResetPasswordWithTokenUseCase } from '@/features/auth/application/factories/reset-password-with-token.factory';
 import { apiErrorHandler } from '@/shared/lib/api-error-handler';
+import { getTenantFromRequest } from '@/shared/lib/require-tenant';
 import {
   getLocaleFromRequest,
   translateApiMessage,
@@ -10,6 +11,7 @@ import {
 
 export async function POST(req: NextRequest) {
   try {
+    await getTenantFromRequest(req);
     const dto = ResetPasswordWithTokenSchema.parse(await req.json());
     const resetPasswordUseCase = makeResetPasswordWithTokenUseCase();
     await resetPasswordUseCase.execute(dto);

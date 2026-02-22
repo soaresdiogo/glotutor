@@ -6,6 +6,7 @@ import { studentProfiles } from '@/infrastructure/db/schema/student-profiles';
 import { supportedLanguages } from '@/infrastructure/db/schema/supported-languages';
 import { apiErrorHandler } from '@/shared/lib/api-error-handler';
 import { BadRequestError, UnauthorizedError } from '@/shared/lib/errors';
+import { getTenantFromRequest } from '@/shared/lib/require-tenant';
 
 export type StudentProfileResponse = {
   id: string;
@@ -36,8 +37,22 @@ const NATIVE_LANGUAGE_CODES = [
   'zh',
 ] as const;
 
+function optionalString(value: unknown): string | undefined {
+  return typeof value === 'string' && value.trim() ? value.trim() : undefined;
+}
+
+function parsePatchBody(body: unknown) {
+  const raw = body as Record<string, unknown>;
+  return {
+    nativeLanguageCode: optionalString(raw.nativeLanguageCode),
+    targetLanguageId: optionalString(raw.targetLanguageId),
+    currentLevel: optionalString(raw.currentLevel),
+  };
+}
+
 export async function GET(req: NextRequest) {
   try {
+    await getTenantFromRequest(req);
     const user = await getReadingAuthUser(req);
     if (!user) {
       throw new UnauthorizedError(
@@ -100,8 +115,52 @@ export async function GET(req: NextRequest) {
   }
 }
 
+async function updateExistingProfile(
+  existing: typeof studentProfiles.$inferSelect & { id: string },
+  parsed: ReturnType<typeof parsePatchBody>,
+) {
+  const updates: Record<string, string> = {};
+  if (parsed.nativeLanguageCode != null)
+    updates.nativeLanguageCode = parsed.nativeLanguageCode;
+  if (parsed.targetLanguageId != null)
+    updates.targetLanguageId = parsed.targetLanguageId;
+  if (parsed.currentLevel != null) updates.currentLevel = parsed.currentLevel;
+  if (Object.keys(updates).length === 0) {
+    return Response.json({ ok: true, profile: existing });
+  }
+  const [updated] = await db
+    .update(studentProfiles)
+    .set({ ...updates, updatedAt: new Date() })
+    .where(eq(studentProfiles.id, existing.id))
+    .returning();
+  return Response.json({ ok: true, profile: updated });
+}
+
+async function createNewProfile(
+  userId: string,
+  parsed: ReturnType<typeof parsePatchBody>,
+) {
+  if (!parsed.targetLanguageId) {
+    throw new BadRequestError(
+      'targetLanguageId is required to create a profile.',
+      'profile.api.targetLanguageRequired',
+    );
+  }
+  const [created] = await db
+    .insert(studentProfiles)
+    .values({
+      userId,
+      targetLanguageId: parsed.targetLanguageId,
+      nativeLanguageCode: parsed.nativeLanguageCode ?? 'pt-BR',
+      currentLevel: parsed.currentLevel ?? 'A1',
+    })
+    .returning();
+  return Response.json({ ok: true, profile: created });
+}
+
 export async function PATCH(req: NextRequest) {
   try {
+    await getTenantFromRequest(req);
     const user = await getReadingAuthUser(req);
     if (!user) {
       throw new UnauthorizedError(
@@ -111,59 +170,15 @@ export async function PATCH(req: NextRequest) {
     }
 
     const body = await req.json();
-    const nativeLanguageCode =
-      typeof body.nativeLanguageCode === 'string' &&
-      body.nativeLanguageCode.trim()
-        ? body.nativeLanguageCode.trim()
-        : undefined;
-    const targetLanguageId =
-      typeof body.targetLanguageId === 'string' && body.targetLanguageId.trim()
-        ? body.targetLanguageId.trim()
-        : undefined;
-    const currentLevel =
-      typeof body.currentLevel === 'string' && body.currentLevel.trim()
-        ? body.currentLevel.trim()
-        : undefined;
-
+    const parsed = parsePatchBody(body);
     const existing = await db.query.studentProfiles.findFirst({
       where: eq(studentProfiles.userId, user.id),
     });
 
     if (existing) {
-      const updates: Record<string, string> = {};
-      if (nativeLanguageCode != null)
-        updates.nativeLanguageCode = nativeLanguageCode;
-      if (targetLanguageId != null) updates.targetLanguageId = targetLanguageId;
-      if (currentLevel != null) updates.currentLevel = currentLevel;
-      if (Object.keys(updates).length === 0) {
-        return Response.json({ ok: true, profile: existing });
-      }
-      const [updated] = await db
-        .update(studentProfiles)
-        .set({ ...updates, updatedAt: new Date() })
-        .where(eq(studentProfiles.id, existing.id))
-        .returning();
-      return Response.json({ ok: true, profile: updated });
+      return updateExistingProfile(existing, parsed);
     }
-
-    if (!targetLanguageId) {
-      throw new BadRequestError(
-        'targetLanguageId is required to create a profile.',
-        'profile.api.targetLanguageRequired',
-      );
-    }
-
-    const [created] = await db
-      .insert(studentProfiles)
-      .values({
-        userId: user.id,
-        targetLanguageId,
-        nativeLanguageCode: nativeLanguageCode ?? 'pt-BR',
-        currentLevel: currentLevel ?? 'A1',
-      })
-      .returning();
-
-    return Response.json({ ok: true, profile: created });
+    return createNewProfile(user.id, parsed);
   } catch (error) {
     return apiErrorHandler(error, req);
   }

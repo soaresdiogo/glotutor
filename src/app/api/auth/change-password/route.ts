@@ -1,10 +1,14 @@
+import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
+import { apiErrorHandler } from '@/shared/lib/api-error-handler';
+import { getTenantFromRequest } from '@/shared/lib/require-tenant';
 
-/**
- * Stub: change password for authenticated user.
- * TODO: Implement use case and call it here.
- */
-export async function POST() {
+export async function POST(req: NextRequest) {
+  try {
+    await getTenantFromRequest(req);
+  } catch (error) {
+    return apiErrorHandler(error, req);
+  }
   return NextResponse.json(
     { message: 'Change password is not implemented yet.' },
     { status: 501 },

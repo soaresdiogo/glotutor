@@ -21,6 +21,12 @@ const serverSchema = z.object({
   // Reading feature (optional — graceful fallback when unset)
   REDIS_URL: z.url().optional(),
   OPENAI_API_KEY: z.string().optional(),
+  /** Content generation: "openai" | "gemini". Default openai. */
+  CONTENT_GENERATION_PROVIDER: z.enum(['openai', 'gemini']).optional(),
+  /** Content generation model (e.g. gpt-4o-mini, gemini-1.5-pro). Default per provider. */
+  CONTENT_GENERATION_MODEL: z.string().optional(),
+  /** Required when CONTENT_GENERATION_PROVIDER=gemini. */
+  GEMINI_API_KEY: z.string().optional(),
   /** Max speaking sessions per user per day. Optional, default 5. */
   SPEAKING_DAILY_SESSION_LIMIT: z.coerce.number().int().min(1).optional(),
   /** Max native lessons a student can complete per day. Optional, default 1. */
@@ -30,11 +36,15 @@ const serverSchema = z.object({
   S3_SECRET_ACCESS_KEY: z.string().optional(),
   S3_BUCKET_NAME: z.string().optional(),
   S3_REGION: z.string().optional(),
+  STRIPE_SECRET_KEY: z.string().min(1).optional(),
+  STRIPE_WEBHOOK_SECRET: z.string().default(''),
+  STRIPE_PUBLISHABLE_KEY: z.string().optional(),
 });
 
 const clientSchema = z.object({
   NEXT_PUBLIC_APP_URL: z.url().default('http://localhost:3000'),
   NEXT_PUBLIC_API_URI: z.url().default('http://localhost:3000/api'),
+  NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: z.string().default(''),
 });
 
 function getServerEnv() {
@@ -55,6 +65,8 @@ function getClientEnv() {
   return clientSchema.parse({
     NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
     NEXT_PUBLIC_API_URI: process.env.NEXT_PUBLIC_API_URI,
+    NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY:
+      process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? '',
   });
 }
 

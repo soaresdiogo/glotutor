@@ -8,6 +8,7 @@ import { db } from '@/infrastructure/db/client';
 import { studentProfiles } from '@/infrastructure/db/schema/student-profiles';
 import { supportedLanguages } from '@/infrastructure/db/schema/supported-languages';
 import { apiErrorHandler } from '@/shared/lib/api-error-handler';
+import { getTenantFromRequest } from '@/shared/lib/require-tenant';
 import {
   getLocaleFromRequest,
   translateApiMessage,
@@ -15,15 +16,22 @@ import {
 
 export async function POST(req: NextRequest) {
   try {
+    await getTenantFromRequest(req);
     const dto = RegisterSchema.parse(await req.json());
     const registerUseCase = makeRegisterUseCase();
     const { userId, email } = await registerUseCase.execute(dto);
 
-    const defaultLang = await db.query.supportedLanguages.findFirst({
-      where: eq(supportedLanguages.isActive, true),
-      orderBy: [asc(supportedLanguages.code)],
-      columns: { id: true },
-    });
+    // Prefer first active language; fallback to any language so new users always get a profile.
+    const defaultLang =
+      (await db.query.supportedLanguages.findFirst({
+        where: eq(supportedLanguages.isActive, true),
+        orderBy: [asc(supportedLanguages.code)],
+        columns: { id: true },
+      })) ??
+      (await db.query.supportedLanguages.findFirst({
+        orderBy: [asc(supportedLanguages.code)],
+        columns: { id: true },
+      }));
     if (defaultLang) {
       await db.insert(studentProfiles).values({
         userId,

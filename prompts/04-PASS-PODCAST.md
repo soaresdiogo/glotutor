@@ -6,6 +6,19 @@
 
 ---
 
+## ⚠️ CRITICAL REQUIREMENTS (READ FIRST — MANDATORY)
+
+These are **non-negotiable**. Failing to meet them = FAILED validation.
+
+1. **Comprehension exercises:** Exactly **10** exercises in total (across pre_listening, while_listening, post_listening). Fewer = FAIL.
+2. **Chunk integration:** At least **60%** of Pass 1 chunks must appear naturally in the script. Fewer = validation failure.
+3. **Episode metadata + script:** Must be present; missing = FAIL.
+4. **Duration/style:** Respect the level's `podcast_params` from LEVEL CONFIGURATION (duration target, speakers, speech rate).
+
+Same rules for every target language. No negotiation.
+
+---
+
 ## CONTEXT INJECTION FROM PREVIOUS PASSES
 
 ```json

@@ -47,15 +47,21 @@ export async function saveLessonToDb(
   const o = output as { content?: Record<string, unknown> };
   const content = o.content ?? {};
   const lang = langCode(spec);
-  const title = spec.title || spec.moduleId;
+  const generatedTitle = content.lesson_title as string | undefined;
+  const generatedDescription = content.lesson_description as string | undefined;
+  const title =
+    (generatedTitle?.trim() && generatedTitle) || spec.title || spec.moduleId;
 
   const dialogue = content.dialogue as
     | { setting?: string; emotional_tone?: string }
     | undefined;
-  const description =
+  const fallbackDescription =
     [spec.situationalTheme, dialogue?.setting, dialogue?.emotional_tone]
       .filter(Boolean)
       .join(' — ') || null;
+  const description =
+    (generatedDescription?.trim() && generatedDescription) ||
+    fallbackDescription;
 
   const [maxRow] = await db
     .select({
@@ -70,13 +76,15 @@ export async function saveLessonToDb(
     );
   const sortOrder = (maxRow?.maxOrder ?? 0) + 1;
 
+  const contentWithModuleId = { ...content, module_id: spec.moduleId };
+
   await db.insert(nativeLessons).values({
     language: lang,
     level: spec.cefrLevel,
     title,
     description,
     sortOrder,
-    content: content as object,
+    content: contentWithModuleId as object,
     isPublished: true,
   });
 }
@@ -112,13 +120,14 @@ export async function saveReadingToDb(
     | undefined;
   const title = rt?.title || spec.title || spec.moduleId;
 
-  const fullContent = JSON.stringify(content);
+  const structuredWithModuleId = { ...content, module_id: spec.moduleId };
+  const fullContent = JSON.stringify(structuredWithModuleId);
 
   await db.insert(texts).values({
     languageId,
     title,
     content: fullContent,
-    structuredContent: content as object,
+    structuredContent: structuredWithModuleId as object,
     category: rt?.format || spec.readingFormat || 'reading',
     level: spec.cefrLevel,
     cefrLevel: spec.cefrLevel,
@@ -170,6 +179,7 @@ export async function savePodcastToDb(
     exercises: content.exercises,
     speed_versions: content.speed_versions,
     adaptive_metadata: content.adaptive_metadata,
+    module_id: spec.moduleId,
   };
 
   const [inserted] = await db
@@ -269,6 +279,65 @@ function mapExerciseType(
 // evaluation criteria, fluency_gym. rich_content holds the same for querying.
 //
 
+const SPEAKING_FIXATION_TYPES = [
+  'fill_blank',
+  'multiple_choice',
+  'reorder_sentence',
+  'match_expression',
+] as const;
+
+type SpeakingFixationRow = {
+  questionNumber: number;
+  type: (typeof SPEAKING_FIXATION_TYPES)[number];
+  questionText: string;
+  options: string[] | Record<string, string>[] | null;
+  correctAnswer: string;
+  explanationText: string;
+};
+
+function getNativeExpressionsFromScenarios(
+  scenarios: Array<Record<string, unknown>>,
+): string[] {
+  return scenarios
+    .flatMap(
+      (s) =>
+        (s as { target_chunks?: { bonus?: string[] } }).target_chunks?.bonus ??
+        [],
+    )
+    .filter((v, i, a) => a.indexOf(v) === i)
+    .slice(0, 20);
+}
+
+function normalizeFixationExercise(
+  ex: Record<string, unknown>,
+  index: number,
+): SpeakingFixationRow | null {
+  const typeRaw = (ex.type as string) ?? 'fill_blank';
+  const type = SPEAKING_FIXATION_TYPES.includes(
+    typeRaw as (typeof SPEAKING_FIXATION_TYPES)[number],
+  )
+    ? (typeRaw as (typeof SPEAKING_FIXATION_TYPES)[number])
+    : 'fill_blank';
+  const questionText = (
+    typeof ex.question_text === 'string' ? ex.question_text : ''
+  ).trim();
+  const correctAnswer = (
+    typeof ex.correct_answer === 'string' ? ex.correct_answer : ''
+  ).trim();
+  if (!questionText || !correctAnswer) return null;
+  return {
+    questionNumber: Number(ex.question_number) || index + 1,
+    type,
+    questionText,
+    options: (ex.options as string[] | Record<string, string>[] | null) ?? null,
+    correctAnswer,
+    explanationText: (typeof ex.explanation_text === 'string'
+      ? ex.explanation_text
+      : ''
+    ).trim(),
+  };
+}
+
 export async function saveSpeakingToDb(
   db: DbClient,
   output: unknown,
@@ -290,19 +359,9 @@ export async function saveSpeakingToDb(
   const slug = `${spec.moduleId}-speaking`;
   const description =
     first?.situation?.description_for_learner ?? spec.situationalTheme ?? '';
-
   const richContextPrompt = JSON.stringify(content);
-
   const keyVocabulary = first?.target_chunks?.primary ?? [];
-
-  const nativeExpressions = scenarios
-    .flatMap(
-      (s) =>
-        (s as { target_chunks?: { bonus?: string[] } }).target_chunks?.bonus ??
-        [],
-    )
-    .filter((v, i, a) => a.indexOf(v) === i)
-    .slice(0, 20);
+  const nativeExpressions = getNativeExpressionsFromScenarios(scenarios);
 
   const [inserted] = await db
     .insert(speakingTopics)
@@ -325,40 +384,12 @@ export async function saveSpeakingToDb(
   const fixationExercises = (content.fixation_exercises ?? []) as Array<
     Record<string, unknown>
   >;
-  const allowedTypes = [
-    'fill_blank',
-    'multiple_choice',
-    'reorder_sentence',
-    'match_expression',
-  ] as const;
-
   for (let i = 0; i < fixationExercises.length; i++) {
-    const ex = fixationExercises[i];
-    const typeRaw = (ex.type as string) ?? 'fill_blank';
-    const type = allowedTypes.includes(typeRaw as (typeof allowedTypes)[number])
-      ? (typeRaw as (typeof allowedTypes)[number])
-      : 'fill_blank';
-    const questionNumber = Number(ex.question_number) || i + 1;
-    const questionText = (
-      typeof ex.question_text === 'string' ? ex.question_text : ''
-    ).trim();
-    const correctAnswer = (
-      typeof ex.correct_answer === 'string' ? ex.correct_answer : ''
-    ).trim();
-    const explanationText = (
-      typeof ex.explanation_text === 'string' ? ex.explanation_text : ''
-    ).trim();
-    if (!questionText || !correctAnswer) continue;
-
-    const options = ex.options as string[] | Record<string, string>[] | null;
+    const row = normalizeFixationExercise(fixationExercises[i], i);
+    if (!row) continue;
     await db.insert(speakingExercises).values({
       topicId: inserted.id,
-      questionNumber,
-      type,
-      questionText,
-      options: options ?? null,
-      correctAnswer,
-      explanationText,
+      ...row,
     });
   }
 }

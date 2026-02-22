@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { makeVerifyMfaUseCase } from '@/features/auth/application/factories/verify-mfa.factory';
 import { LoginPresenter } from '@/features/auth/infrastructure/presenters/login.presenter';
 import { apiErrorHandler } from '@/shared/lib/api-error-handler';
+import { getTenantFromRequest } from '@/shared/lib/require-tenant';
 
 const VerifyMfaSchema = z.object({
   sessionId: z.uuid(),
@@ -11,6 +12,7 @@ const VerifyMfaSchema = z.object({
 
 export async function POST(req: NextRequest) {
   try {
+    await getTenantFromRequest(req);
     const data = VerifyMfaSchema.parse(await req.json());
 
     const forwardedFor = req.headers.get('x-forwarded-for');

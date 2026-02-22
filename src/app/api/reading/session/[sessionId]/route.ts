@@ -5,6 +5,7 @@ import { makeSaveSessionFeedbackUseCase } from '@/features/reading/application/f
 import { SaveSessionFeedbackPresenter } from '@/features/reading/infrastructure/presenters/save-session-feedback.presenter';
 import { apiErrorHandler } from '@/shared/lib/api-error-handler';
 import { BadRequestError, UnauthorizedError } from '@/shared/lib/errors';
+import { getTenantFromRequest } from '@/shared/lib/require-tenant';
 
 import { getReadingAuthUser } from '../../get-auth-user';
 
@@ -13,6 +14,7 @@ export async function PATCH(
   { params }: { params: Promise<{ sessionId: string }> },
 ) {
   try {
+    await getTenantFromRequest(req);
     const user = await getReadingAuthUser(req);
     if (!user) {
       throw new UnauthorizedError(

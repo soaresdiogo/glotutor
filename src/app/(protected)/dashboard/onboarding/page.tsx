@@ -2,6 +2,7 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';
+import { studentProfileApi } from '@/client-api/student-profile.api';
 import { userLanguagesApi } from '@/client-api/user-languages.api';
 import {
   type ExistingLanguagesMap,
@@ -25,6 +26,14 @@ export default function OnboardingPage() {
     queryFn: () => userLanguagesApi.list(),
     staleTime: 60 * 1000,
   });
+
+  const { data: profileData } = useQuery({
+    queryKey: ['student-profile'],
+    queryFn: () => studentProfileApi.get(),
+    staleTime: 60 * 1000,
+  });
+
+  const nativeLanguageCode = profileData?.profile?.nativeLanguageCode ?? null;
 
   const existingLanguages = useMemo<ExistingLanguagesMap>(() => {
     const list = languagesData?.languages ?? [];
@@ -58,6 +67,7 @@ export default function OnboardingPage() {
             selectedLanguage={selectedLanguage}
             onSelect={goToPathStep}
             existingLanguages={existingLanguages}
+            excludeNativeLanguageCode={nativeLanguageCode}
           />
         </div>
       </main>

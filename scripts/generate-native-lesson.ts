@@ -92,6 +92,21 @@ function buildSystemPrompt(
   title: string,
   description: string,
 ): string {
+  const isBeginner = level === 'A1' || level === 'A2';
+  const nativeInstructionBlock = isBeginner
+    ? `
+For A1 and A2: include "nativeLanguage": "${studentNative}" at the root, and in EVERY exercise include "prompt_native" and "scenario_native" (when the exercise has a scenario). These are the SAME prompt/scenario text translated into the student's native language (${studentNative}) — generate them in this same response, do not skip.`
+    : '';
+  const nativeLanguageLine = isBeginner
+    ? `"nativeLanguage": "${studentNative}",`
+    : '';
+  const nativePromptLine = isBeginner
+    ? `"prompt_native": "... (prompt in ${studentNative})",`
+    : '';
+  const nativeScenarioLine = isBeginner
+    ? `"scenario_native": "... (scenario in ${studentNative})",`
+    : '';
+
   return `You are a world-class language teacher who teaches through NATIVE SPEECH PATTERNS, not traditional textbook methods.
 
 You are creating a lesson to teach ${language} to students who speak ${studentNative}.
@@ -109,15 +124,10 @@ CORE PHILOSOPHY:
 
 OUTPUT FORMAT:
 Generate a JSON object with the following structure in ONE single response. Return ONLY valid JSON, no markdown or extra text.
-${
-  level === 'A1' || level === 'A2'
-    ? `
-For A1 and A2: include "nativeLanguage": "${studentNative}" at the root, and in EVERY exercise include "prompt_native" and "scenario_native" (when the exercise has a scenario). These are the SAME prompt/scenario text translated into the student's native language (${studentNative}) — generate them in this same response, do not skip.`
-    : ''
-}
+${nativeInstructionBlock}
 
 {
-  ${level === 'A1' || level === 'A2' ? `"nativeLanguage": "${studentNative}",` : ''}
+  ${nativeLanguageLine}
   "sections": [
     {
       "type": "CONCEPT",
@@ -141,18 +151,18 @@ For A1 and A2: include "nativeLanguage": "${studentNative}" at the root, and in 
     {
       "type": "REORDER",
       "prompt": "...",
-      ${level === 'A1' || level === 'A2' ? `"prompt_native": "... (prompt in ${studentNative})",` : ''}
+      ${nativePromptLine}
       "scenario": "...",
-      ${level === 'A1' || level === 'A2' ? `"scenario_native": "... (scenario in ${studentNative})",` : ''}
+      ${nativeScenarioLine}
       "words": ["word1", "word2"],
       "answer": "word1 word2"
     },
     {
       "type": "SITUATION",
       "prompt": "...",
-      ${level === 'A1' || level === 'A2' ? `"prompt_native": "... (prompt in ${studentNative})",` : ''}
+      ${nativePromptLine}
       "scenario": "...",
-      ${level === 'A1' || level === 'A2' ? `"scenario_native": "... (scenario in ${studentNative})",` : ''}
+      ${nativeScenarioLine}
       "placeholder": "...",
       "hint": "...",
       "expected_answer": "Example of a good native answer in the target language",
@@ -164,7 +174,7 @@ For A1 and A2: include "nativeLanguage": "${studentNative}" at the root, and in 
     {
       "type": "MATCH",
       "prompt": "...",
-      ${level === 'A1' || level === 'A2' ? `"prompt_native": "... (prompt in ${studentNative})",` : ''}
+      ${nativePromptLine}
       "pairs": [
         { "situation": "...", "chunk": "..." }
       ]
@@ -172,9 +182,9 @@ For A1 and A2: include "nativeLanguage": "${studentNative}" at the root, and in 
     {
       "type": "CHOICE",
       "prompt": "...",
-      ${level === 'A1' || level === 'A2' ? `"prompt_native": "... (prompt in ${studentNative})",` : ''}
+      ${nativePromptLine}
       "scenario": "...",
-      ${level === 'A1' || level === 'A2' ? `"scenario_native": "... (scenario in ${studentNative})",` : ''}
+      ${nativeScenarioLine}
       "options": [
         { "text": "...", "correct": true, "explanation": "..." },
         { "text": "...", "correct": false, "explanation": "..." }
@@ -183,7 +193,7 @@ For A1 and A2: include "nativeLanguage": "${studentNative}" at the root, and in 
     {
       "type": "TRANSFORM",
       "prompt": "...",
-      ${level === 'A1' || level === 'A2' ? `"prompt_native": "... (prompt in ${studentNative})",` : ''}
+      ${nativePromptLine}
       "pairs": [
         {
           "textbook": "The formal/robotic version",

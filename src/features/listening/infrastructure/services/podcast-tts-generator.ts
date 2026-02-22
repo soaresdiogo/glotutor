@@ -1,7 +1,17 @@
 import { eq } from 'drizzle-orm';
-import type { TTSVoice } from '@/features/listening/domain/ports/tts-gateway.interface';
+import type {
+  ITTSGateway,
+  TTSVoice,
+} from '@/features/listening/domain/ports/tts-gateway.interface';
 import { OpenAITTSGateway } from '@/features/listening/infrastructure/gateways/openai-tts.gateway';
 import { S3StorageGateway } from '@/features/listening/infrastructure/gateways/s3-storage.gateway';
+
+/**
+ * When called with only apiKey, this uses OpenAI TTS (nova/alloy); OpenAI does not accept
+ * language/locale, so non-English podcasts may not sound native. For native pronunciation,
+ * use the GeneratePodcastUseCase flow with AZURE_SPEECH_KEY and AZURE_SPEECH_REGION set,
+ * which uses Azure Neural voices per language.
+ */
 import { db } from '@/infrastructure/db/client';
 import { podcasts } from '@/infrastructure/db/schema/podcasts';
 import { supportedLanguages } from '@/infrastructure/db/schema/supported-languages';
@@ -31,26 +41,20 @@ function getVoiceForSpeaker(speakerId: string | undefined): TTSVoice {
   return VOICE_1;
 }
 
-/**
- * Generates audio for a podcast via OpenAI TTS, uploads to S3/MinIO, and updates the podcast row.
- * Uses two voices when script has multiple speakers (from rich_content). Idempotent: skips if podcast already has audioUrl.
- */
-export async function generatePodcastTts(
+type PodcastRow = {
+  id: string;
+  transcript: string;
+  audioUrl: string;
+  cefrLevel: string;
+  languageId: string;
+  richContent: unknown;
+};
+
+async function fetchPodcastRow(
   podcastId: string,
-  apiKey: string,
-): Promise<{ ok: true } | { ok: false; reason: string }> {
-  let row:
-    | {
-        id: string;
-        transcript: string;
-        audioUrl: string;
-        cefrLevel: string;
-        languageId: string;
-        richContent: unknown;
-      }
-    | undefined;
+): Promise<{ ok: true; row: PodcastRow } | { ok: false; reason: string }> {
   try {
-    [row] = await db
+    const [row] = await db
       .select({
         id: podcasts.id,
         transcript: podcasts.transcript,
@@ -62,6 +66,8 @@ export async function generatePodcastTts(
       .from(podcasts)
       .where(eq(podcasts.id, podcastId))
       .limit(1);
+    if (!row) return { ok: false, reason: 'Podcast not found' };
+    return { ok: true, row: row as PodcastRow };
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     const cause =
@@ -70,84 +76,122 @@ export async function generatePodcastTts(
         : '';
     return { ok: false, reason: cause ? `${msg} (${cause})` : msg };
   }
+}
 
-  if (!row) {
-    return { ok: false, reason: 'Podcast not found' };
-  }
-  if (row.audioUrl && row.audioUrl.length > 0) {
+function validateRowForTts(
+  row: PodcastRow,
+): { ok: true } | { ok: false; reason: string } {
+  if (row.audioUrl?.length) {
     return { ok: false, reason: 'Podcast already has audio' };
   }
-  if (!row.transcript || row.transcript.trim().length === 0) {
+  if (!row.transcript?.trim()) {
     return { ok: false, reason: 'Podcast has no transcript' };
   }
+  return { ok: true };
+}
 
-  const [langRow] = await db
-    .select({ code: supportedLanguages.code })
-    .from(supportedLanguages)
-    .where(eq(supportedLanguages.id, row.languageId))
-    .limit(1);
-  const langCode = langRow?.code ?? 'en';
-  const langPrefix = langCode.split('-')[0];
-  const level = (row.cefrLevel ?? 'A1').toUpperCase();
-  const speed = TTS_SPEED_BY_CEFR[level] ?? 1;
-
-  const tts = new OpenAITTSGateway(apiKey);
-  const storage = new S3StorageGateway();
-
+function getScriptLines(
+  row: PodcastRow,
+): Array<{ speaker?: string; text?: string }> {
   const rich = row.richContent as {
     script?: {
       sections?: Array<{ lines?: Array<{ speaker?: string; text?: string }> }>;
     };
   } | null;
   const sections = rich?.script?.sections ?? [];
-  const allLines = sections
+  return sections
     .flatMap((s) => s.lines ?? [])
-    .filter((l) => l.text?.trim());
+    .filter((l) => (l.text ?? '').trim());
+}
 
-  let audioBuffer: Uint8Array;
-  if (allLines.length >= 2) {
-    const chunks: Uint8Array[] = [];
-    for (const line of allLines) {
-      const text = (line.text ?? '').trim();
-      if (!text) continue;
-      const voice = getVoiceForSpeaker(line.speaker);
-      const buf = await tts.synthesize({
-        text,
-        voice,
-        speed,
-        model: 'tts-1-hd',
-      });
-      chunks.push(buf);
-    }
-    audioBuffer = new Uint8Array(chunks.reduce((acc, b) => acc + b.length, 0));
-    let offset = 0;
-    for (const c of chunks) {
-      audioBuffer.set(c, offset);
-      offset += c.length;
-    }
-  } else {
-    const transcriptForTts = row.transcript
-      .replaceAll(/\b(speaker_\d+|host|guest):\s*/gi, '')
-      .trim();
-    audioBuffer = await tts.synthesize({
-      text: transcriptForTts || row.transcript,
-      voice: VOICE_1,
+async function synthesizeMultiSpeaker(
+  tts: ITTSGateway,
+  lines: Array<{ speaker?: string; text?: string }>,
+  speed: number,
+  languageCode: string,
+): Promise<Uint8Array> {
+  const chunks: Uint8Array[] = [];
+  for (const line of lines) {
+    const text = (line.text ?? '').trim();
+    if (!text) continue;
+    const buf = await tts.synthesize({
+      text,
+      voice: getVoiceForSpeaker(line.speaker),
       speed,
       model: 'tts-1-hd',
+      languageCode,
     });
+    chunks.push(buf);
   }
+  const audioBuffer = new Uint8Array(
+    chunks.reduce((acc, b) => acc + b.length, 0),
+  );
+  let offset = 0;
+  for (const c of chunks) {
+    audioBuffer.set(c, offset);
+    offset += c.length;
+  }
+  return audioBuffer;
+}
+
+async function synthesizeSingleVoice(
+  tts: ITTSGateway,
+  transcript: string,
+  speed: number,
+  languageCode: string,
+): Promise<Uint8Array> {
+  const text = transcript
+    .replaceAll(/\b(speaker_\d+|host|guest):\s*/gi, '')
+    .trim();
+  return tts.synthesize({
+    text: text || transcript,
+    voice: VOICE_1,
+    speed,
+    model: 'tts-1-hd',
+    languageCode,
+  });
+}
+
+/**
+ * Generates audio for a podcast via OpenAI TTS, uploads to S3/MinIO, and updates the podcast row.
+ * Uses two voices when script has multiple speakers (from rich_content). Idempotent: skips if podcast already has audioUrl.
+ */
+export async function generatePodcastTts(
+  podcastId: string,
+  apiKey: string,
+): Promise<{ ok: true } | { ok: false; reason: string }> {
+  const fetchResult = await fetchPodcastRow(podcastId);
+  if (!fetchResult.ok) return fetchResult;
+
+  const validation = validateRowForTts(fetchResult.row);
+  if (!validation.ok) return validation;
+
+  const row = fetchResult.row;
+  const [langRow] = await db
+    .select({ code: supportedLanguages.code })
+    .from(supportedLanguages)
+    .where(eq(supportedLanguages.id, row.languageId))
+    .limit(1);
+  const languageCode = langRow?.code ?? 'en';
+  const langPrefix = languageCode.split('-')[0];
+  const level = (row.cefrLevel ?? 'A1').toUpperCase();
+  const speed = TTS_SPEED_BY_CEFR[level] ?? 1;
+
+  const tts = new OpenAITTSGateway(apiKey);
+  const allLines = getScriptLines(row);
+  const audioBuffer =
+    allLines.length >= 2
+      ? await synthesizeMultiSpeaker(tts, allLines, speed, languageCode)
+      : await synthesizeSingleVoice(tts, row.transcript, speed, languageCode);
 
   const key = `podcasts/${langPrefix}/${level}/${crypto.randomUUID()}.mp3`;
+  const storage = new S3StorageGateway();
   const audioUrl = await storage.uploadAudio(key, audioBuffer, 'audio/mpeg');
-  if (!audioUrl) {
-    return { ok: false, reason: 'Failed to upload audio' };
-  }
+  if (!audioUrl) return { ok: false, reason: 'Failed to upload audio' };
 
-  const transcriptWordCount = row.transcript
-    .split(/\s+/)
-    .filter(Boolean).length;
-  const durationSeconds = Math.ceil((transcriptWordCount / 150) * 60);
-
+  const durationSeconds = Math.ceil(
+    (row.transcript.split(/\s+/).filter(Boolean).length / 150) * 60,
+  );
   await db
     .update(podcasts)
     .set({

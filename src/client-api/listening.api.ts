@@ -102,9 +102,11 @@ export type ExerciseResultsResponse = {
 };
 
 export const listeningApi = {
-  listPodcasts: () =>
+  listPodcasts: (params?: { language?: string; level?: string }) =>
     httpClient
-      .get('listening/podcasts')
+      .get('listening/podcasts', {
+        searchParams: params ?? {},
+      })
       .json<{ podcasts: PodcastListItem[] }>(),
 
   getPodcast: (podcastId: string) =>

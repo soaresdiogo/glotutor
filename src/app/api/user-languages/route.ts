@@ -5,9 +5,11 @@ import { makeAddLanguageUseCase } from '@/features/user-languages/application/fa
 import { makeGetUserLanguagesUseCase } from '@/features/user-languages/application/factories/get-user-languages.factory';
 import { apiErrorHandler } from '@/shared/lib/api-error-handler';
 import { UnauthorizedError } from '@/shared/lib/errors';
+import { getTenantFromRequest } from '@/shared/lib/require-tenant';
 
 export async function GET(req: NextRequest) {
   try {
+    await getTenantFromRequest(req);
     const user = await getUserLanguagesAuthUser(req);
     if (!user) {
       throw new UnauthorizedError(
@@ -25,6 +27,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
+    await getTenantFromRequest(req);
     const user = await getUserLanguagesAuthUser(req);
     if (!user) {
       throw new UnauthorizedError(

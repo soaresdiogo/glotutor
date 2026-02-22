@@ -3,6 +3,14 @@
 > This file defines all level-specific parameters. The script loads the appropriate
 > config based on the module's CEFR level and injects it into the generation prompts.
 
+## Target-language adaptation
+
+The `grammar_patterns` and `connected_speech` arrays below are described in English and are calibrated for **English as the target language**. When generating content for another target language (Portuguese, Spanish, French, German, Italian):
+
+1. **Map or replace** grammar patterns with the closest equivalent in the target language (e.g. "Present perfect (experiential)" → French passé composé vs imparfait, or Spanish pretérito perfecto; "Phrasal verbs" → German separable verbs or French fixed "verb + preposition" expressions where applicable).
+2. **Replace connected_speech** with phenomena that exist in the target language (e.g. French: liaison, elision; German: sentence rhythm, separable verb stress; Spanish: linking, weak pronouns; Portuguese: mesóclise, contractions).
+3. **Do not** literally teach "Present perfect" or "wanna/gonna" when the target language is not English.
+
 ---
 
 ## A1 — Social Survival System

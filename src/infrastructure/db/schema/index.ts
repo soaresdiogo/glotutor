@@ -2,6 +2,7 @@ export { achievements } from './achievements';
 export { audioLessons } from './audio-lessons';
 export { audioSegments } from './audio-segments';
 export { auditLogs } from './audit-logs';
+export { certificates } from './certificates';
 export { certificationExamAnswers } from './certification-exam-answers';
 export { certificationExams } from './certification-exams';
 export { consentRecords } from './consent-records';
@@ -24,6 +25,7 @@ export { nativeLessonProgress } from './native-lesson-progress';
 export { nativeLessons } from './native-lessons';
 export { passwordResetTokens } from './password-reset-tokens';
 export { paymentHistory } from './payment-history';
+export { pendingSignups } from './pending-signups';
 export { placementTestAnswers } from './placement-test-answers';
 export { placementTestAttempts } from './placement-test-attempts';
 export { placementTestQuestions } from './placement-test-questions';
@@ -39,6 +41,7 @@ export {
   achievementsRelations,
   audioLessonsRelations,
   audioSegmentsRelations,
+  certificatesRelations,
   certificationExamAnswersRelations,
   certificationExamsRelations,
   consentRecordsRelations,

@@ -107,6 +107,7 @@ export class GeneratePodcastUseCase implements IGeneratePodcastUseCase {
       audioBuffer = await this.generateMultiVoiceAudio(
         segments,
         speed,
+        input.targetLanguage,
         input.onProgress,
       );
     } else {
@@ -117,6 +118,7 @@ export class GeneratePodcastUseCase implements IGeneratePodcastUseCase {
         voice: VOICE_A,
         speed,
         model: 'tts-1-hd',
+        languageCode: input.targetLanguage,
       });
     }
 
@@ -175,6 +177,7 @@ export class GeneratePodcastUseCase implements IGeneratePodcastUseCase {
   private async generateMultiVoiceAudio(
     segments: Array<{ speaker: 'A' | 'B'; text: string }>,
     speed: number,
+    targetLanguage: string,
     onProgress?: (message: string) => void,
   ): Promise<Uint8Array> {
     const tmpDir = path.join(
@@ -197,6 +200,7 @@ export class GeneratePodcastUseCase implements IGeneratePodcastUseCase {
           voice,
           speed,
           model: 'tts-1-hd',
+          languageCode: targetLanguage,
         });
         const segPath = path.join(tmpDir, `seg${i}.mp3`);
         fs.writeFileSync(segPath, buf);

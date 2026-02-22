@@ -3,6 +3,7 @@ import type { NextRequest } from 'next/server';
 import { makeCompleteSpeakingSessionUseCase } from '@/features/speaking/application/factories/complete-speaking-session.factory';
 import { apiErrorHandler } from '@/shared/lib/api-error-handler';
 import { BadRequestError, UnauthorizedError } from '@/shared/lib/errors';
+import { getTenantFromRequest } from '@/shared/lib/require-tenant';
 
 import { getSpeakingAuthUser } from '../../../get-auth-user';
 
@@ -11,6 +12,7 @@ export async function POST(
   { params }: { params: Promise<{ sessionId: string }> },
 ) {
   try {
+    await getTenantFromRequest(req);
     const user = await getSpeakingAuthUser(req);
     if (!user) {
       throw new UnauthorizedError(
