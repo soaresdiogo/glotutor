@@ -115,6 +115,11 @@ class StripeServiceImpl implements IStripeService {
     return stripe.subscriptions.retrieve(subscriptionId);
   }
 
+  /**
+   * Cancels the subscription immediately in Stripe. The customer is not charged
+   * again. For "cancel at period end" (user keeps access until period end, no
+   * renewal), use updateSubscription({ cancelAtPeriodEnd: true }) instead.
+   */
   async cancelSubscription(
     subscriptionId: string,
   ): Promise<Stripe.Subscription> {
@@ -122,6 +127,10 @@ class StripeServiceImpl implements IStripeService {
     return stripe.subscriptions.cancel(subscriptionId);
   }
 
+  /**
+   * Updates subscription (e.g. set cancel_at_period_end: true so the customer
+   * keeps access until current_period_end and is not charged again on renewal).
+   */
   async updateSubscription(
     params: UpdateSubscriptionParams,
   ): Promise<Stripe.Subscription> {

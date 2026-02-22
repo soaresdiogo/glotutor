@@ -54,4 +54,7 @@ export const authApi = {
     httpClient
       .post('auth/register', { json: payload })
       .json<{ message: string; userId: string; email: string }>(),
+
+  deleteAccount: () =>
+    httpClient.post('auth/delete-account').json<{ message: string }>(),
 };

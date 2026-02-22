@@ -26,6 +26,8 @@ export const users = pgTable(
     locale: varchar('locale', { length: 10 }).default('en-US'),
     status: varchar('status', { length: 20 }).notNull().default('pending'),
     lastLoginAt: timestamp('last_login_at'),
+    /** When set, user requested account deletion (e.g. after canceling subscription). Access until subscription period ends, then deletedAt is set. */
+    deletionRequestedAt: timestamp('deletion_requested_at'),
     deletedAt: timestamp('deleted_at'),
     createdAt: timestamp('created_at').notNull().defaultNow(),
     updatedAt: timestamp('updated_at').notNull().defaultNow(),
