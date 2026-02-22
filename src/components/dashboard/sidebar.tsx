@@ -67,16 +67,22 @@ type NavSectionProps = Readonly<{
   labelKey: string;
   items: ReadonlyArray<NavItem>;
   onClose: () => void;
+  badgeKey?: string;
 }>;
 
-function NavSection({ labelKey, items, onClose }: NavSectionProps) {
+function NavSection({ labelKey, items, onClose, badgeKey }: NavSectionProps) {
   const pathname = usePathname();
   const { t } = useTranslate();
 
   return (
     <section className="mb-6" aria-label={t(labelKey)}>
-      <h2 className="mb-2 px-3 text-[11px] font-semibold uppercase tracking-wider text-(--text-dim)">
+      <h2 className="mb-2 flex flex-wrap items-center gap-2 px-3 text-[11px] font-semibold uppercase tracking-wider text-(--text-dim)">
         {t(labelKey)}
+        {badgeKey != null && (
+          <span className="rounded-full bg-(--accent/15) px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-(--accent)">
+            {t(badgeKey)}
+          </span>
+        )}
       </h2>
       <ul className="space-y-0.5">
         {items.map((item) => {
@@ -253,11 +259,13 @@ export function Sidebar({ open, onClose }: SidebarProps) {
             labelKey="dashboard.navContent"
             items={NAV_CONTENT}
             onClose={onClose}
+            badgeKey="common.comingSoon"
           />
           <NavSection
             labelKey="dashboard.navCommunity"
             items={NAV_COMMUNITY}
             onClose={onClose}
+            badgeKey="common.comingSoon"
           />
         </nav>
 

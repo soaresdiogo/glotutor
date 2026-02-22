@@ -1,6 +1,7 @@
 'use client';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import Link from 'next/link';
 import { useId, useState } from 'react';
 import { studentProfileApi } from '@/client-api/student-profile.api';
 import type { MySubscriptionResponse } from '@/client-api/subscriptions.api';
@@ -220,6 +221,13 @@ export function AccountManageModal() {
                     ? t('profile.manageSubscription')
                     : t('profile.subscription')}
                 </button>
+                <Link
+                  href="/dashboard/certificates"
+                  onClick={handleClose}
+                  className="w-full rounded-xl border-2 border-(--border) bg-(--bg-card) px-4 py-3 text-left font-medium text-(--text) transition hover:border-(--accent/50) hover:bg-(--bg-elevated)"
+                >
+                  {t('profile.certificates')}
+                </Link>
                 <button
                   type="button"
                   onClick={() => setTermsModalOpen(true)}

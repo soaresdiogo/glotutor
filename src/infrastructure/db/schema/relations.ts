@@ -3,6 +3,7 @@ import { achievements } from './achievements';
 import { audioLessons } from './audio-lessons';
 import { audioSegments } from './audio-segments';
 import { auditLogs } from './audit-logs';
+import { certificates } from './certificates';
 import { certificationExamAnswers } from './certification-exam-answers';
 import { certificationExams } from './certification-exams';
 import { consentRecords } from './consent-records';
@@ -103,6 +104,7 @@ export const usersRelations = relations(users, ({ one, many }) => ({
   placementTestAttempts: many(placementTestAttempts),
   userLanguageProgress: many(userLanguageProgress),
   levelProgress: many(levelProgress),
+  certificates: many(certificates),
   certificationExams: many(certificationExams),
   userLanguagePreferences: one(userLanguagePreferences, {
     fields: [users.id],
@@ -489,6 +491,13 @@ export const userLanguageProgressRelations = relations(
 export const levelProgressRelations = relations(levelProgress, ({ one }) => ({
   user: one(users, {
     fields: [levelProgress.userId],
+    references: [users.id],
+  }),
+}));
+
+export const certificatesRelations = relations(certificates, ({ one }) => ({
+  user: one(users, {
+    fields: [certificates.userId],
     references: [users.id],
   }),
 }));
