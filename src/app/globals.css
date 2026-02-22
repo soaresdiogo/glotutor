@@ -37,6 +37,7 @@
     --font-sans: "Plus Jakarta Sans", sans-serif;
     --font-serif: "Instrument Serif", ui-serif, Georgia, serif;
     --font-mono: "JetBrains Mono", ui-monospace, monospace;
+    --font-signature: "Great Vibes", cursive;
   }
 
   html {

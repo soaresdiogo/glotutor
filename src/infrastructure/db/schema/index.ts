@@ -2,6 +2,7 @@ export { achievements } from './achievements';
 export { audioLessons } from './audio-lessons';
 export { audioSegments } from './audio-segments';
 export { auditLogs } from './audit-logs';
+export { certificates } from './certificates';
 export { certificationExamAnswers } from './certification-exam-answers';
 export { certificationExams } from './certification-exams';
 export { consentRecords } from './consent-records';
@@ -40,6 +41,7 @@ export {
   achievementsRelations,
   audioLessonsRelations,
   audioSegmentsRelations,
+  certificatesRelations,
   certificationExamAnswersRelations,
   certificationExamsRelations,
   consentRecordsRelations,

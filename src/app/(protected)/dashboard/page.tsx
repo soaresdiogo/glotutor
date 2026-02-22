@@ -251,12 +251,15 @@ export default function DashboardPage() {
         </section>
 
         <section className="mb-8" aria-labelledby={achievementsHeadingId}>
-          <div className="mb-5 flex items-center justify-between">
+          <div className="mb-5 flex flex-wrap items-center justify-between gap-2">
             <h2
               id={achievementsHeadingId}
-              className="text-2xl font-medium text-(--text)"
+              className="flex flex-wrap items-center gap-2 text-2xl font-medium text-(--text)"
             >
               {t('dashboard.recentAchievements')}
+              <span className="rounded-full bg-(--accent/15) px-2.5 py-0.5 text-xs font-semibold uppercase tracking-wide text-(--accent)">
+                {t('common.comingSoon')}
+              </span>
             </h2>
             <Link
               href="/dashboard/achievements"

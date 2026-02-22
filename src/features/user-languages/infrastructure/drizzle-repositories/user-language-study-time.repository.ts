@@ -1,4 +1,4 @@
-import { and, eq, gte, lte } from 'drizzle-orm';
+import { and, eq, gte, lte, sql } from 'drizzle-orm';
 import type { IUserLanguageStudyTimeRepository } from '@/features/user-languages/domain/repositories/user-language-study-time.repository.interface';
 import { userLanguageStudyTime } from '@/infrastructure/db/schema/user-language-study-time';
 import type { DbClient } from '@/infrastructure/db/types';
@@ -67,5 +67,23 @@ export class DrizzleUserLanguageStudyTimeRepository
         activitiesCompleted: data.activitiesCompleted,
       });
     }
+  }
+
+  async totalMinutesByUserAndLanguage(
+    userId: string,
+    language: string,
+  ): Promise<number> {
+    const [row] = await this.db
+      .select({
+        total: sql<number>`coalesce(sum(${userLanguageStudyTime.minutesStudied}), 0)::int`,
+      })
+      .from(userLanguageStudyTime)
+      .where(
+        and(
+          eq(userLanguageStudyTime.userId, userId),
+          eq(userLanguageStudyTime.language, language),
+        ),
+      );
+    return row?.total ?? 0;
   }
 }
