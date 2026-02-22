@@ -67,6 +67,14 @@ export function LanguageProvider({
       }
       queryClient.invalidateQueries({ queryKey: ['level-progress'] });
       queryClient.invalidateQueries({ queryKey: ['progress'] });
+      queryClient.invalidateQueries({ queryKey: ['native-lessons'] });
+      queryClient.invalidateQueries({ queryKey: ['listening', 'podcasts'] });
+      queryClient.invalidateQueries({ queryKey: ['speaking', 'topics'] });
+      queryClient.invalidateQueries({ queryKey: ['speaking', 'topic'] });
+      queryClient.invalidateQueries({
+        queryKey: ['speaking', 'lastCompletedSession'],
+      });
+      queryClient.invalidateQueries({ queryKey: ['reading', 'texts'] });
     },
     [queryClient],
   );

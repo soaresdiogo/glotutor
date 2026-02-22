@@ -1,6 +1,7 @@
 import type { SpeakingFeedbackEntity } from '@/features/speaking/domain/entities/speaking-session.entity';
 import type { ISpeakingFeedbackAIGateway } from '@/features/speaking/domain/ports/speaking-feedback-ai.interface';
 import type { ISpeakingSessionRepository } from '@/features/speaking/domain/repositories/speaking-session-repository.interface';
+import type { IStudentProfileProvider } from '@/features/student-profile/domain/ports/student-profile-provider.interface';
 import { NotFoundError } from '@/shared/lib/errors';
 
 import type { SubmitSpeakingFeedbackDto } from '../dto/speaking-feedback.dto';
@@ -18,6 +19,7 @@ export class GenerateSpeakingFeedbackUseCase
   constructor(
     private readonly sessionRepo: ISpeakingSessionRepository,
     private readonly feedbackGateway: ISpeakingFeedbackAIGateway,
+    private readonly profileProvider: IStudentProfileProvider,
   ) {}
 
   async execute(
@@ -38,10 +40,13 @@ export class GenerateSpeakingFeedbackUseCase
       );
     }
 
+    const profile = await this.profileProvider.getProfile(userId);
+    const nativeLanguage = profile?.nativeLanguageCode ?? 'en';
+
     const feedback = await this.feedbackGateway.generateFeedback({
       transcript: dto.transcript,
       targetLanguage: session.topic.languageCode ?? 'en',
-      nativeLanguage: 'en',
+      nativeLanguage,
       cefrLevel: session.topic.cefrLevel,
       topicTitle: session.topic.title,
     });

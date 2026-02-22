@@ -91,8 +91,10 @@ export const speakingApi = {
       .get('speaking/topics', { searchParams: params ?? {} })
       .json<{ topics: SpeakingTopicListItem[] }>(),
 
-  getTopicBySlug: (slug: string) =>
-    httpClient.get(`speaking/topics/${slug}`).json<SpeakingTopicDetail>(),
+  getTopicBySlug: (slug: string, params?: { language?: string }) =>
+    httpClient
+      .get(`speaking/topics/${slug}`, { searchParams: params ?? {} })
+      .json<SpeakingTopicDetail>(),
 
   createSession: (topicId: string) =>
     httpClient
@@ -165,8 +167,10 @@ export const speakingApi = {
       .get(`speaking/session/${sessionId}/results`)
       .json<SessionResults>(),
 
-  getLastCompletedSession: (slug: string) =>
+  getLastCompletedSession: (slug: string, params?: { language?: string }) =>
     httpClient
-      .get(`speaking/topics/${slug}/last-session`)
+      .get(`speaking/topics/${slug}/last-session`, {
+        searchParams: params ?? {},
+      })
       .json<{ sessionId: string | null; completedAt: string | null }>(),
 };

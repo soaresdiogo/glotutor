@@ -3,6 +3,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { GET } from './route';
 
+vi.mock('@/shared/lib/require-tenant', () => ({
+  getTenantFromRequest: vi
+    .fn()
+    .mockResolvedValue({ id: 'tenant-1', name: 'Test' }),
+}));
+
 vi.mock('../get-auth-user', () => ({
   getListeningAuthUser: vi.fn(),
 }));
@@ -53,13 +59,19 @@ describe('GET /api/listening/podcasts', () => {
       .mockResolvedValue([{ id: 'p1', title: 'Podcast 1' }]);
     makeGetPodcastListUseCase.mockReturnValue({ execute } as never);
 
-    const req = new Request('http://localhost/api/listening/podcasts');
-    const res = await GET(req as NextRequest);
+    const url = new URL('http://localhost/api/listening/podcasts');
+    const req = Object.assign(new Request(url), {
+      nextUrl: url,
+    }) as NextRequest;
+    const res = await GET(req);
 
     expect(res.status).toBe(200);
     const data = await res.json();
     expect(data.podcasts).toHaveLength(1);
     expect(data.podcasts[0].title).toBe('Podcast 1');
-    expect(execute).toHaveBeenCalledWith('user-1');
+    expect(execute).toHaveBeenCalledWith('user-1', {
+      language: undefined,
+      level: undefined,
+    });
   });
 });

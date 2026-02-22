@@ -15,6 +15,33 @@ const LANGUAGES: LanguageOption[] = [
   { code: 'de', name: 'German', flag: '🇩🇪' },
 ];
 
+/**
+ * Returns true when the study language is the same as the user's native language
+ * (e.g. pt matches pt-BR, en matches en).
+ */
+function isNativeLanguage(
+  studyLangCode: string,
+  nativeLanguageCode: string | null | undefined,
+): boolean {
+  if (nativeLanguageCode == null || nativeLanguageCode === '') return false;
+  const nativeBase = nativeLanguageCode.split('-')[0];
+  return studyLangCode === nativeBase || studyLangCode === nativeLanguageCode;
+}
+
+/**
+ * Languages available for study, excluding the user's native language when provided.
+ */
+export function getLanguagesForStudy(
+  nativeLanguageCode?: string | null,
+): LanguageOption[] {
+  if (nativeLanguageCode == null || nativeLanguageCode === '') {
+    return [...LANGUAGES];
+  }
+  return LANGUAGES.filter(
+    (lang) => !isNativeLanguage(lang.code, nativeLanguageCode),
+  );
+}
+
 /** Map of language code -> current level for already-added languages */
 export type ExistingLanguagesMap = Map<string, string>;
 
@@ -24,6 +51,8 @@ type LanguageGridProps = {
   disabled?: boolean;
   /** Already-added languages: shown as non-clickable with "Studying — Level X" */
   existingLanguages?: ExistingLanguagesMap;
+  /** When set, the language matching this code (e.g. pt-BR, en) is excluded from the list */
+  excludeNativeLanguageCode?: string | null;
 };
 
 export function LanguageGrid({
@@ -31,10 +60,13 @@ export function LanguageGrid({
   selectedLanguage,
   disabled = false,
   existingLanguages,
+  excludeNativeLanguageCode,
 }: LanguageGridProps) {
+  const languagesToShow = getLanguagesForStudy(excludeNativeLanguageCode);
+
   return (
     <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
-      {LANGUAGES.map((lang) => {
+      {languagesToShow.map((lang) => {
         const addedLevel = existingLanguages?.get(lang.code);
         const isAdded = addedLevel !== undefined;
         const isClickable = !disabled && !isAdded;

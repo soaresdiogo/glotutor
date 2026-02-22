@@ -72,25 +72,6 @@ export class SpeakingTopicRepository implements ISpeakingTopicRepository {
       columns: { id: true },
     });
     const languageIds = languages.map((l) => l.id);
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/7bff0321-f76f-4652-8eaa-085556b0ca30', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        location: 'speaking-topic.repository.ts:findBySlug:langs',
-        message: 'Resolved language IDs for slug lookup',
-        data: {
-          slug,
-          languageCode,
-          codePrefix,
-          languageIdsLength: languageIds.length,
-          languageIds: languageIds,
-        },
-        hypothesisId: 'H2',
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-    // #endregion
     if (languageIds.length === 0) return null;
 
     const row = await this.dbClient.query.speakingTopics.findFirst({
@@ -100,25 +81,6 @@ export class SpeakingTopicRepository implements ISpeakingTopicRepository {
       ),
       with: { language: { columns: { code: true } } },
     });
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/7bff0321-f76f-4652-8eaa-085556b0ca30', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        location: 'speaking-topic.repository.ts:findBySlug:row',
-        message: 'Topic row found',
-        data: {
-          slug,
-          languageCode,
-          found: !!row,
-          rowLanguageId: row?.languageId,
-          topicLangCode: row?.language?.code,
-        },
-        hypothesisId: 'H2',
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-    // #endregion
     if (!row) return null;
 
     return {

@@ -22,6 +22,8 @@ Return exactly this structure:
   "encouragement_message": "string"
 }
 
+LANGUAGE RULE: You will be told the student's native language (e.g. pt-BR, en, es). Write ALL of the following in that language so the student can read the feedback easily: strengths, grammar_errors[].explanation, pronunciation_notes, vocabulary_used[].context, improvement_suggestions, encouragement_message. Keep grammar_errors[].what_student_said and grammar_errors[].correction in the TARGET language (the language they were practicing), since those are the actual phrases. vocabulary_used[].word should stay in the target language.
+
 Be encouraging and specific. For grammar_errors only include clear mistakes the student made. For vocabulary_used include words/phrases the student used well or that are worth noting.`;
 
 export class OpenAISpeakingFeedbackGateway
@@ -51,12 +53,12 @@ export class OpenAISpeakingFeedbackGateway
         { role: 'system', content: FEEDBACK_SYSTEM },
         {
           role: 'user',
-          content: `Target language: ${params.targetLanguage}. Native language: ${params.nativeLanguage}. CEFR level: ${params.cefrLevel}. Topic: ${params.topicTitle}.
+          content: `Target language (language being practiced): ${params.targetLanguage}. Student's native language (write all feedback text in this language): ${params.nativeLanguage}. CEFR level: ${params.cefrLevel}. Topic: ${params.topicTitle}.
 
 Conversation transcript:
 ${transcriptText}
 
-Analyze and return the JSON feedback object only.`,
+Write strengths, explanations, suggestions, encouragement_message and pronunciation_notes in ${params.nativeLanguage}. Keep what_student_said and correction in ${params.targetLanguage}. Analyze and return the JSON feedback object only.`,
         },
       ],
       response_format: { type: 'json_object' },

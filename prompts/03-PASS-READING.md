@@ -98,18 +98,18 @@ These are **MANDATORY** — failure to meet ANY of these = FAILED validation:
 
 ## WORD COUNT GUIDELINES BY CEFR LEVEL
 
-**STRICT ENFORCEMENT** — These are hard limits:
+**STRICT ENFORCEMENT — MANDATORY.** The exact range for this run is in **LEVEL CONFIGURATION** as `reading.word_count.min` and `reading.word_count.max`. You MUST stay within that range. Generating below the minimum = FAILED validation.
 
-| CEFR Level | Word Count Range | Typical Structure |
-|------------|------------------|-------------------|
-| **A1** | 80-120 words | 2-3 short paragraphs |
-| **A2** | 120-180 words | 3-4 paragraphs |
-| **B1** | 180-250 words | 4-5 paragraphs |
-| **B2** | 250-350 words | 5-6 paragraphs |
-| **C1** | 350-500 words | 6-8 paragraphs |
-| **C2** | 500-700 words | 8-10 paragraphs |
+| CEFR Level | Word Count Range (from 01-LEVEL-PARAMS) | Typical Structure |
+|------------|----------------------------------------|-------------------|
+| **A1** | 100-300 words | 2-4 short paragraphs |
+| **A2** | 200-500 words | 3-5 paragraphs |
+| **B1** | 400-800 words | 4-6 paragraphs |
+| **B2** | 600-1200 words | 5-8 paragraphs |
+| **C1** | 800-1500 words | 6-10 paragraphs |
+| **C2** | 1000-2000 words | 8-12 paragraphs |
 
-⚠️ **CRITICAL:** A 300-word text for A1 learners = FAILED validation.
+⚠️ **CRITICAL:** For this run the injected range is **min: {min}, max: {max}**. Your `reading_text.word_count` MUST be ≥ min and ≤ max. No exceptions.
 
 ---
 

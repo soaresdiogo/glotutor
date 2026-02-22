@@ -6,25 +6,17 @@ import {
   type LessonListItem,
   nativeLessonsApi,
 } from '@/client-api/native-lessons.api';
-import { studentProfileApi } from '@/client-api/student-profile.api';
+import { useLanguageContext } from '@/providers/language-provider';
 
 const CEFR_LEVELS = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'] as const;
 
-function languageCodeToShort(code: string): string {
-  return code.split('-')[0]?.toLowerCase() ?? code;
-}
-
 export function useNativeLessons() {
-  const profileQuery = useQuery({
-    queryKey: ['student-profile'],
-    queryFn: () => studentProfileApi.get(),
-  });
+  const { activeLanguage, languages } = useLanguageContext();
 
-  const language = profileQuery.data?.profile?.targetLanguage?.code
-    ? languageCodeToShort(profileQuery.data.profile.targetLanguage.code)
-    : 'en';
   const currentLevel =
-    profileQuery.data?.profile?.currentLevel ?? CEFR_LEVELS[0];
+    languages.find((l) => l.language === activeLanguage)?.currentLevel ??
+    CEFR_LEVELS[0];
+  const language = activeLanguage;
 
   const lessonsQuery = useQuery({
     queryKey: ['native-lessons', language, currentLevel],
@@ -32,13 +24,13 @@ export function useNativeLessons() {
       const res = await nativeLessonsApi.getLessons(language, currentLevel);
       return res.lessons;
     },
-    enabled: !!language && !!currentLevel && profileQuery.isSuccess,
+    enabled: !!language && !!currentLevel && languages.length > 0,
   });
 
   const dailyLimitQuery = useQuery({
     queryKey: ['native-lessons', 'daily-limit'],
     queryFn: () => nativeLessonsApi.getDailyLimit(),
-    enabled: profileQuery.isSuccess,
+    enabled: languages.length > 0,
   });
 
   const lessons = lessonsQuery.data ?? [];
@@ -51,9 +43,9 @@ export function useNativeLessons() {
     language,
     currentLevel,
     lessons,
-    isLoading: profileQuery.isPending || lessonsQuery.isPending,
-    isError: profileQuery.isError || lessonsQuery.isError,
-    error: profileQuery.error ?? lessonsQuery.error,
+    isLoading: lessonsQuery.isPending,
+    isError: lessonsQuery.isError,
+    error: lessonsQuery.error,
     refetchLessons: lessonsQuery.refetch,
     dailyLimit: {
       used: usedToday,

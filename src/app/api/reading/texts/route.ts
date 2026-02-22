@@ -20,9 +20,13 @@ export async function GET(req: NextRequest) {
       );
     }
 
+    const language = req.nextUrl.searchParams.get('language') ?? undefined;
+    const level = req.nextUrl.searchParams.get('level') ?? undefined;
     const useCase = makeGetReadingTextListUseCase();
-    const result = await useCase.execute(user.id);
-
+    const result = await useCase.execute(user.id, {
+      languageCode: language,
+      level,
+    });
     const texts =
       result.kind === 'cached'
         ? (JSON.parse(result.body) as { texts: Array<{ id: string }> }).texts

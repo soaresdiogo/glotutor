@@ -109,8 +109,10 @@ export type FeedbackResponse = {
 };
 
 export const readingApi = {
-  listTexts: () =>
-    httpClient.get('reading/texts').json<{ texts: ReadingTextListItem[] }>(),
+  listTexts: (params?: { language?: string; level?: string }) =>
+    httpClient
+      .get('reading/texts', { searchParams: params ?? {} })
+      .json<{ texts: ReadingTextListItem[] }>(),
 
   getText: (id: string) =>
     httpClient.get(`reading/texts/${id}`).json<ReadingTextDetail>(),

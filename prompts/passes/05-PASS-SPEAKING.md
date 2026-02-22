@@ -6,6 +6,18 @@
 
 ---
 
+## ⚠️ CRITICAL REQUIREMENTS (READ FIRST — MANDATORY)
+
+These are **non-negotiable**. Failing to meet them = FAILED validation or warnings.
+
+1. **Scenarios:** Generate the number of scenarios indicated by `speaking_params.variation_count` for this level. Do not generate fewer.
+2. **Fixation exercises:** Generate exactly **5–8** exercises after the conversation (fill_blank, multiple_choice, reorder_sentence, match_expression). Missing or fewer = warning.
+3. **Evaluation criteria + fluency gym:** Must be present; missing = warnings.
+
+Same rules for every target language. No negotiation.
+
+---
+
 ## CONTEXT INJECTION FROM ALL PREVIOUS PASSES
 
 ```json
@@ -93,8 +105,8 @@ Generate `{variationCount}` distinct scenarios:
             "example": "An example of natural scaffolding in-character"
           },
           "if_learner_uses_native_language": {
-            "strategy": "How to redirect gently",
-            "example": "Example response that guides back to target language"
+            "strategy": "Redirect in {targetLanguage} only; encourage a response in {targetLanguage}. Do not reply in {nativeLanguage}.",
+            "example": "Example response in {targetLanguage} that guides back to target language"
           },
           "if_learner_succeeds": {
             "strategy": "How to naturally escalate complexity",
@@ -161,7 +173,9 @@ Generate `{variationCount}` distinct scenarios:
 }
 ```
 
-**Scenario design rules per level:**
+**Scenario design rules:**
+- **Response language:** The AI character must respond ONLY in {targetLanguage}. If the target language has formal/informal "you" (e.g. tú/usted, tu/vous, du/Sie), specify which form the AI uses (e.g. "tutear", "usted only") in the ai_character behavior_rules or register.
+- **Corrections** should reflect common {nativeLanguage}→{targetLanguage} errors (e.g. false friends, word order, tense), not generic grammar.
 
 | Level | Scenarios should... |
 |-------|-------------------|

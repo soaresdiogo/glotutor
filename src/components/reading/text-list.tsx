@@ -4,18 +4,26 @@ import { useQuery } from '@tanstack/react-query';
 
 import { type ReadingTextListItem, readingApi } from '@/client-api/reading.api';
 import { useTranslate } from '@/locales';
+import { useLanguageContext } from '@/providers/language-provider';
 
 import { TextCard } from './text-card';
 
 export function TextList() {
   const { t } = useTranslate();
+  const { activeLanguage, languages } = useLanguageContext();
+  const level =
+    languages.find((l) => l.language === activeLanguage)?.currentLevel ?? 'A1';
 
   const { data, isPending, isError } = useQuery({
-    queryKey: ['reading', 'texts'],
+    queryKey: ['reading', 'texts', activeLanguage, level],
     queryFn: async () => {
-      const res = await readingApi.listTexts();
+      const res = await readingApi.listTexts({
+        language: activeLanguage,
+        level,
+      });
       return res.texts;
     },
+    enabled: !!activeLanguage && languages.length > 0,
   });
 
   if (isPending) {
