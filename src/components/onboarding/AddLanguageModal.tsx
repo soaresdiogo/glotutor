@@ -3,6 +3,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import { useCallback, useId, useMemo, useState } from 'react';
+import { studentProfileApi } from '@/client-api/student-profile.api';
 import { userLanguagesApi } from '@/client-api/user-languages.api';
 import {
   type ExistingLanguagesMap,
@@ -55,6 +56,15 @@ export function AddLanguageModal() {
     staleTime: 60 * 1000,
     enabled: isOpen,
   });
+
+  const { data: profileData } = useQuery({
+    queryKey: ['student-profile'],
+    queryFn: () => studentProfileApi.get(),
+    staleTime: 60 * 1000,
+    enabled: isOpen,
+  });
+
+  const nativeLanguageCode = profileData?.profile?.nativeLanguageCode ?? null;
 
   const existingLanguages = useMemo<ExistingLanguagesMap>(() => {
     const list = languagesData?.languages ?? [];
@@ -166,6 +176,7 @@ export function AddLanguageModal() {
                 selectedLanguage={selectedLanguage}
                 onSelect={handleSelectLanguage}
                 existingLanguages={existingLanguages}
+                excludeNativeLanguageCode={nativeLanguageCode}
               />
             </>
           )}

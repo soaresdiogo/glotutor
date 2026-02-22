@@ -17,7 +17,8 @@ const GRAMMAR_TERMS = [
   'declension',
 ];
 
-const MIN_SECTIONS_BY_LEVEL: Record<string, number> = {
+/** Exported so prompt-composer can inject level-specific minimums into lesson prompt. */
+export const MIN_SECTIONS_BY_LEVEL: Record<string, number> = {
   A1: 8,
   A2: 10,
   B1: 10,
@@ -26,13 +27,14 @@ const MIN_SECTIONS_BY_LEVEL: Record<string, number> = {
   C2: 14,
 };
 
-const MIN_EXERCISES_BY_LEVEL: Record<string, number> = {
+/** Exported so prompt-composer can inject level-specific minimums into lesson prompt. */
+export const MIN_EXERCISES_BY_LEVEL: Record<string, number> = {
   A1: 10,
-  A2: 12,
-  B1: 14,
-  B2: 16,
-  C1: 16,
-  C2: 18,
+  A2: 10,
+  B1: 10,
+  B2: 10,
+  C1: 10,
+  C2: 10,
 };
 
 function validateChunkCount(
@@ -109,6 +111,9 @@ function validateMistakesL1(
     | Array<{ why_wrong?: string }>
     | undefined;
   if (!mistakes?.length) return;
+  const nativeEqualsTarget =
+    moduleSpec.nativeLanguage === moduleSpec.targetLanguage;
+  if (nativeEqualsTarget) return;
   const nativeLang = moduleSpec.nativeLanguage;
   const genericCount = mistakes.filter(
     (m) =>
@@ -135,11 +140,12 @@ function validateConceptSections(
       content?: { examples?: unknown[] };
     }>) ?? [];
   const conceptSections = sections.filter((s) => s.type === 'CONCEPT');
-  const minSections = MIN_SECTIONS_BY_LEVEL[moduleSpec.cefrLevel] ?? 8;
+  const levelKey = (moduleSpec.cefrLevel ?? 'A1').toString().toUpperCase();
+  const minSections = MIN_SECTIONS_BY_LEVEL[levelKey] ?? 8;
 
   if (conceptSections.length < minSections) {
     errors.push(
-      `Only ${conceptSections.length} CONCEPT sections — minimum ${minSections} required for ${moduleSpec.cefrLevel}`,
+      `Only ${conceptSections.length} CONCEPT sections — minimum ${minSections} required for ${levelKey}`,
     );
   }
 
@@ -168,10 +174,11 @@ function validateExercisesCount(
   errors: string[],
 ): void {
   const exercises = (content.exercises as unknown[]) ?? [];
-  const minExercises = MIN_EXERCISES_BY_LEVEL[moduleSpec.cefrLevel] ?? 10;
+  const levelKey = (moduleSpec.cefrLevel ?? 'A1').toString().toUpperCase();
+  const minExercises = MIN_EXERCISES_BY_LEVEL[levelKey] ?? 10;
   if (exercises.length < minExercises) {
     errors.push(
-      `Only ${exercises.length} exercises — minimum ${minExercises} required for ${moduleSpec.cefrLevel}`,
+      `Only ${exercises.length} exercises — minimum ${minExercises} required for ${levelKey}`,
     );
   }
 }

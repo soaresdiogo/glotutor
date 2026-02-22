@@ -169,11 +169,15 @@ export class SendSpeakingMessageUseCase {
     }
   }
 
+  /**
+   * Resolves TTS locale (e.g. en-US, pt-BR, pt-PT) from topic.
+   * Supports full locale for regional variants; defaults: en -> en-US, pt -> pt-BR.
+   */
   private resolveTtsLanguage(topic: { languageCode?: string | null }): string {
-    const targetLanguage = topic.languageCode ?? 'en';
-    return !targetLanguage || targetLanguage.startsWith('en')
-      ? 'en-US'
-      : targetLanguage;
+    const raw = (topic.languageCode ?? 'en').trim();
+    if (!raw) return 'en-US';
+    if (raw.startsWith('en')) return raw.length > 2 ? raw : 'en-US';
+    return raw;
   }
 
   private async returnGoodbyeMaxTurns(

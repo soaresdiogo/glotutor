@@ -14,6 +14,14 @@ export type GetTextsForUserResult =
   | { kind: 'cached'; body: string }
   | { kind: 'fresh'; texts: ReadingTextListItemEntity[] };
 
+export type GetTextsForUserParams = {
+  languageCode?: string;
+  level?: string;
+};
+
 export interface IReadingTextListProvider {
-  getTextsForUser(userId: string): Promise<GetTextsForUserResult>;
+  getTextsForUser(
+    userId: string,
+    params?: GetTextsForUserParams,
+  ): Promise<GetTextsForUserResult>;
 }

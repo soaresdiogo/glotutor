@@ -2,12 +2,19 @@
 
 import { useSpeakingTopics } from '@/hooks/speaking';
 import { useTranslate } from '@/locales';
+import { useLanguageContext } from '@/providers/language-provider';
 
 import { SpeakingTopicCard } from './speaking-topic-card';
 
 export function SpeakingTopicList() {
   const { t } = useTranslate();
-  const { data, isPending, isError } = useSpeakingTopics();
+  const { activeLanguage, languages } = useLanguageContext();
+  const level =
+    languages.find((l) => l.language === activeLanguage)?.currentLevel ?? 'A1';
+  const { data, isPending, isError } = useSpeakingTopics({
+    language: activeLanguage,
+    level,
+  });
 
   if (isPending) {
     return (

@@ -84,12 +84,20 @@ export function LessonPlayer({
     | { nativeLanguage?: string }
     | undefined;
   const nativeLanguage = contentWithNative?.nativeLanguage;
+  const lessonTargetLanguage = lesson?.language;
   const level = lesson?.level ?? '';
+  const isGenericContent = Boolean(
+    nativeLanguage &&
+      lessonTargetLanguage &&
+      nativeLanguage === lessonTargetLanguage,
+  );
   const useNativeDescription = Boolean(
     lesson &&
       (level === 'A1' || level === 'A2') &&
       nativeLanguage &&
-      (locale === nativeLanguage || locale.startsWith(`${nativeLanguage}-`)),
+      (isGenericContent ||
+        locale === nativeLanguage ||
+        locale.startsWith(`${nativeLanguage}-`)),
   );
 
   if (isLoading || !lesson) {

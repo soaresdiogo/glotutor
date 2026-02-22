@@ -8,6 +8,10 @@ import type {
   ModuleSpec,
 } from '@/features/content-generation/domain/types/generation-request.types';
 import {
+  MIN_EXERCISES_BY_LEVEL,
+  MIN_SECTIONS_BY_LEVEL,
+} from '../utils/content-validator';
+import {
   BASE_SYSTEM_PATH,
   loadPromptFile,
   PASS_PROMPT_PATHS,
@@ -38,8 +42,18 @@ export class PromptComposerService implements IPromptComposer {
       moduleSpec.contentParams?.variationCount;
 
     const chunkRange = chunkCount as { min: number; max: number } | undefined;
+    const cefr = moduleSpec.cefrLevel ?? 'A1';
+    const minExercises = MIN_EXERCISES_BY_LEVEL[cefr] ?? 10;
+    const minSections = MIN_SECTIONS_BY_LEVEL[cefr] ?? 8;
+    const nativeEqualsTarget =
+      moduleSpec.nativeLanguage === moduleSpec.targetLanguage;
+    const immersionModeNote = nativeEqualsTarget
+      ? '- **Immersion mode:** When nativeLanguage equals targetLanguage, all support text (translations, prompt_native, scenario_native, vocabulary definitions, mistake explanations) must be in the target language. For mistakes, describe common learner errors and explain in the target language; why_wrong need not reference a specific L1.'
+      : '';
     const variables: Record<string, unknown> = {
       ...moduleSpec,
+      nativeEqualsTarget,
+      immersionModeNote,
       specificInstructions: moduleSpec.specificInstructions ?? '',
       targetLanguage: moduleSpec.targetLanguage,
       nativeLanguage: moduleSpec.nativeLanguage,
@@ -57,6 +71,8 @@ export class PromptComposerService implements IPromptComposer {
       variationCount: variationCount
         ? `${(variationCount as { min: number; max: number }).min}-${(variationCount as { min: number; max: number }).max}`
         : '3-5',
+      minExercises,
+      minSections,
       ...(previousPassOutputs ?? {}),
     };
 
@@ -67,11 +83,17 @@ export class PromptComposerService implements IPromptComposer {
     const injectedPassPrompt = injectVariables(passPrompt, variables);
 
     let contextBlock = '';
+    let chunkTargetBanner = '';
     if (previousPassOutputs && pass !== 'lesson') {
       contextBlock = this.buildExplicitContext(pass, previousPassOutputs);
+      chunkTargetBanner = this.buildChunkTargetBanner(
+        pass,
+        previousPassOutputs,
+      );
     }
 
     const userMessage = [
+      chunkTargetBanner,
       `## LEVEL CONFIGURATION\n${JSON.stringify(levelParams, null, 2)}`,
       contextBlock,
       injectedPassPrompt,
@@ -80,6 +102,24 @@ export class PromptComposerService implements IPromptComposer {
       .join('\n\n');
 
     return { systemPrompt, userMessage };
+  }
+
+  /**
+   * Builds a banner with exact chunk target so the LLM sees the required
+   * minimum first. Placed at the very top of the user message to reduce failures.
+   */
+  private buildChunkTargetBanner(
+    pass: ContentPass,
+    outputs: PreviousPassOutputs,
+  ): string {
+    const fromPass1 = outputs.from_pass_1 as Pass1Context | undefined;
+    if (!fromPass1?.chunks_taught?.length || pass !== 'reading') return '';
+    const totalChunks = fromPass1.chunks_taught.length;
+    const minCount = Math.ceil(totalChunks * 0.6);
+    return `## CHUNK COVERAGE TARGET (REQUIRED — DO NOT IGNORE)
+- total_chunks = ${totalChunks}
+- minimum_chunks_required = ${minCount} (60% of ${totalChunks}, rounded up)
+- reading_text.chunks_used MUST be an array of at least ${minCount} chunk IDs. If chunks_used.length < ${minCount} the output is REJECTED. Plan which ${minCount}+ chunk IDs you will use before writing the narrative. This applies to every target language.\n`;
   }
 
   /**
@@ -136,6 +176,8 @@ function buildChunkSection(
   pass: ContentPass,
 ): string | null {
   if (!fromPass1?.chunks_taught?.length) return null;
+  const totalChunks = fromPass1.chunks_taught.length;
+  const minCount = Math.ceil(totalChunks * 0.6);
   const chunkList = fromPass1.chunks_taught
     .map(
       (c, i) =>
@@ -143,14 +185,19 @@ function buildChunkSection(
     )
     .join('\n');
   const minUsage = getMinChunkUsage(pass);
-  const minCount = Math.ceil(fromPass1.chunks_taught.length * 0.6);
-  return `## MANDATORY CHUNKS FROM LESSON
-The lesson taught these ${fromPass1.chunks_taught.length} chunks. You MUST naturally incorporate at least ${minCount} of them (${minUsage}) in your output.
+  return `## MANDATORY CHUNKS FROM LESSON (CHUNK COVERAGE = VALIDATION RULE)
 
-CHUNK LIST:
+NUMERIC TARGET FOR THIS RUN (same for ALL target languages — French, Spanish, etc.):
+- total_chunks = ${totalChunks}
+- minimum_chunks_required = ${minCount} (60% of ${totalChunks}, rounded up)
+- Your "chunks_used" array MUST contain at least ${minCount} chunk IDs. If you return fewer than ${minCount} IDs, the output is REJECTED. No exceptions.
+
+The lesson taught these ${totalChunks} chunks. You MUST naturally incorporate at least ${minCount} of them (${minUsage}) in your output.
+
+CHUNK LIST (use the exact "id" in chunks_used):
 ${chunkList}
 
-IMPORTANT: In your output JSON, include a "chunks_used" array listing the chunk IDs you used (e.g. ["chunk_001", "chunk_003", ...]). If you use fewer than ${minCount} chunks, the output will be REJECTED.`;
+WORKFLOW: (1) Choose at least ${minCount} chunk IDs from the list above — write them down. (2) Write the narrative weaving those chunks in. (3) Set reading_text.chunks_used to that list. If chunks_used.length < ${minCount}, validation FAIL.`;
 }
 
 function buildGrammarSection(

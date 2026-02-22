@@ -32,8 +32,9 @@ export async function GET(
       throw new BadRequestError('Missing slug.', 'speaking.api.missingSlug');
     }
 
+    const language = req.nextUrl.searchParams.get('language') ?? undefined;
     const getTopic = makeGetSpeakingTopicUseCase();
-    const topic = await getTopic.execute(user.id, slug);
+    const topic = await getTopic.execute(user.id, slug, { language });
     if (!topic) {
       return Response.json({
         sessionId: null,

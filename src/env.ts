@@ -21,6 +21,12 @@ const serverSchema = z.object({
   // Reading feature (optional — graceful fallback when unset)
   REDIS_URL: z.url().optional(),
   OPENAI_API_KEY: z.string().optional(),
+  /** Content generation: "openai" | "gemini". Default openai. */
+  CONTENT_GENERATION_PROVIDER: z.enum(['openai', 'gemini']).optional(),
+  /** Content generation model (e.g. gpt-4o-mini, gemini-1.5-pro). Default per provider. */
+  CONTENT_GENERATION_MODEL: z.string().optional(),
+  /** Required when CONTENT_GENERATION_PROVIDER=gemini. */
+  GEMINI_API_KEY: z.string().optional(),
   /** Max speaking sessions per user per day. Optional, default 5. */
   SPEAKING_DAILY_SESSION_LIMIT: z.coerce.number().int().min(1).optional(),
   /** Max native lessons a student can complete per day. Optional, default 1. */

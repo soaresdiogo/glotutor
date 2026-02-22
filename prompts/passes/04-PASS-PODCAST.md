@@ -6,6 +6,19 @@
 
 ---
 
+## ⚠️ CRITICAL REQUIREMENTS (READ FIRST — MANDATORY)
+
+These are **non-negotiable**. Failing to meet them = FAILED validation.
+
+1. **Comprehension exercises:** Exactly **10** exercises in total (across pre_listening, while_listening, post_listening). Fewer = FAIL.
+2. **Chunk integration:** At least **60%** of Pass 1 chunks must appear naturally in the script. Fewer = validation failure.
+3. **Episode metadata + script:** Must be present; missing = FAIL.
+4. **Duration/style:** Respect the level's `podcast_params` from LEVEL CONFIGURATION (duration target, speakers, speech rate).
+
+Same rules for every target language. No negotiation.
+
+---
+
 ## CONTEXT INJECTION FROM PREVIOUS PASSES
 
 ```json
@@ -59,7 +72,7 @@
         "name": "Realistic name for the target language culture",
         "role": "host | guest | friend_1 | friend_2 | colleague | stranger",
         "personality": "2-3 word personality descriptor (e.g., 'laid-back, funny')",
-        "accent": "Accent specification if relevant",
+        "accent": "Locale/variant for TTS (e.g. en-US, en-GB, pt-BR, es-MX). Use one consistent variant per episode unless the scenario requires dialect contrast.",
         "speech_style": "How this person talks (fast, uses lots of fillers, very direct, etc.)",
         "tts_voice_suggestion": "male_young | female_young | male_mature | female_mature"
       }
@@ -112,11 +125,12 @@ Write the complete podcast script. This will be converted to audio via TTS, so w
 - **Always use exactly two speakers** (speaker_1 and speaker_2). Alternate between them so the podcast is a real dialogue, not a monologue. Each section must have multiple lines from both speakers.
 - **Write for TTS output.** Short sentences. Natural breath points. Clear speaker turns.
 - **Minimum length:** aim for at least 2–3 minutes of audio (roughly 300–450 words total) so the episode feels substantial.
-- **Include hesitations and fillers** appropriate to level (A1: rare/modeled, B2+: native rate)
+- **Include hesitations and fillers** appropriate to level and to **{targetLanguage}** (e.g. language-specific fillers, not only English "um", "like").
 - **Self-corrections are content, not errors.** They teach real listening skills.
 - **Reactions and laughter are REQUIRED.** A podcast without "[laughs]" or "[mm-hmm]" sounds robotic.
 - **At least 60% of Pass 1 chunks must appear naturally** in the script.
 - **Each section should be independently understandable** (for section-by-section playback in the app).
+- **Connected speech and reductions** must be appropriate to the target language (e.g. French liaison and elision, German separable verb stress, Spanish reductions), not only English examples like "gonna".
 
 ---
 

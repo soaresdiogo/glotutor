@@ -18,8 +18,10 @@ export async function GET(req: NextRequest) {
         'listening.api.notAuthenticated',
       );
     }
+    const language = req.nextUrl.searchParams.get('language') ?? undefined;
+    const level = req.nextUrl.searchParams.get('level') ?? undefined;
     const useCase = makeGetPodcastListUseCase();
-    const podcasts = await useCase.execute(user.id);
+    const podcasts = await useCase.execute(user.id, { language, level });
     return PodcastListPresenter.success(podcasts);
   } catch (error) {
     return apiErrorHandler(error, req);

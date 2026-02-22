@@ -21,11 +21,17 @@ export async function POST(req: NextRequest) {
     const registerUseCase = makeRegisterUseCase();
     const { userId, email } = await registerUseCase.execute(dto);
 
-    const defaultLang = await db.query.supportedLanguages.findFirst({
-      where: eq(supportedLanguages.isActive, true),
-      orderBy: [asc(supportedLanguages.code)],
-      columns: { id: true },
-    });
+    // Prefer first active language; fallback to any language so new users always get a profile.
+    const defaultLang =
+      (await db.query.supportedLanguages.findFirst({
+        where: eq(supportedLanguages.isActive, true),
+        orderBy: [asc(supportedLanguages.code)],
+        columns: { id: true },
+      })) ??
+      (await db.query.supportedLanguages.findFirst({
+        orderBy: [asc(supportedLanguages.code)],
+        columns: { id: true },
+      }));
     if (defaultLang) {
       await db.insert(studentProfiles).values({
         userId,

@@ -47,15 +47,21 @@ export async function saveLessonToDb(
   const o = output as { content?: Record<string, unknown> };
   const content = o.content ?? {};
   const lang = langCode(spec);
-  const title = spec.title || spec.moduleId;
+  const generatedTitle = content.lesson_title as string | undefined;
+  const generatedDescription = content.lesson_description as string | undefined;
+  const title =
+    (generatedTitle?.trim() && generatedTitle) || spec.title || spec.moduleId;
 
   const dialogue = content.dialogue as
     | { setting?: string; emotional_tone?: string }
     | undefined;
-  const description =
+  const fallbackDescription =
     [spec.situationalTheme, dialogue?.setting, dialogue?.emotional_tone]
       .filter(Boolean)
       .join(' — ') || null;
+  const description =
+    (generatedDescription?.trim() && generatedDescription) ||
+    fallbackDescription;
 
   const [maxRow] = await db
     .select({
@@ -70,13 +76,15 @@ export async function saveLessonToDb(
     );
   const sortOrder = (maxRow?.maxOrder ?? 0) + 1;
 
+  const contentWithModuleId = { ...content, module_id: spec.moduleId };
+
   await db.insert(nativeLessons).values({
     language: lang,
     level: spec.cefrLevel,
     title,
     description,
     sortOrder,
-    content: content as object,
+    content: contentWithModuleId as object,
     isPublished: true,
   });
 }
@@ -112,13 +120,14 @@ export async function saveReadingToDb(
     | undefined;
   const title = rt?.title || spec.title || spec.moduleId;
 
-  const fullContent = JSON.stringify(content);
+  const structuredWithModuleId = { ...content, module_id: spec.moduleId };
+  const fullContent = JSON.stringify(structuredWithModuleId);
 
   await db.insert(texts).values({
     languageId,
     title,
     content: fullContent,
-    structuredContent: content as object,
+    structuredContent: structuredWithModuleId as object,
     category: rt?.format || spec.readingFormat || 'reading',
     level: spec.cefrLevel,
     cefrLevel: spec.cefrLevel,
@@ -170,6 +179,7 @@ export async function savePodcastToDb(
     exercises: content.exercises,
     speed_versions: content.speed_versions,
     adaptive_metadata: content.adaptive_metadata,
+    module_id: spec.moduleId,
   };
 
   const [inserted] = await db

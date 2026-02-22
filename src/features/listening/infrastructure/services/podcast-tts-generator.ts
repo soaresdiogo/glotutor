@@ -1,7 +1,17 @@
 import { eq } from 'drizzle-orm';
-import type { TTSVoice } from '@/features/listening/domain/ports/tts-gateway.interface';
+import type {
+  ITTSGateway,
+  TTSVoice,
+} from '@/features/listening/domain/ports/tts-gateway.interface';
 import { OpenAITTSGateway } from '@/features/listening/infrastructure/gateways/openai-tts.gateway';
 import { S3StorageGateway } from '@/features/listening/infrastructure/gateways/s3-storage.gateway';
+
+/**
+ * When called with only apiKey, this uses OpenAI TTS (nova/alloy); OpenAI does not accept
+ * language/locale, so non-English podcasts may not sound native. For native pronunciation,
+ * use the GeneratePodcastUseCase flow with AZURE_SPEECH_KEY and AZURE_SPEECH_REGION set,
+ * which uses Azure Neural voices per language.
+ */
 import { db } from '@/infrastructure/db/client';
 import { podcasts } from '@/infrastructure/db/schema/podcasts';
 import { supportedLanguages } from '@/infrastructure/db/schema/supported-languages';
@@ -95,9 +105,10 @@ function getScriptLines(
 }
 
 async function synthesizeMultiSpeaker(
-  tts: OpenAITTSGateway,
+  tts: ITTSGateway,
   lines: Array<{ speaker?: string; text?: string }>,
   speed: number,
+  languageCode: string,
 ): Promise<Uint8Array> {
   const chunks: Uint8Array[] = [];
   for (const line of lines) {
@@ -108,6 +119,7 @@ async function synthesizeMultiSpeaker(
       voice: getVoiceForSpeaker(line.speaker),
       speed,
       model: 'tts-1-hd',
+      languageCode,
     });
     chunks.push(buf);
   }
@@ -123,9 +135,10 @@ async function synthesizeMultiSpeaker(
 }
 
 async function synthesizeSingleVoice(
-  tts: OpenAITTSGateway,
+  tts: ITTSGateway,
   transcript: string,
   speed: number,
+  languageCode: string,
 ): Promise<Uint8Array> {
   const text = transcript
     .replaceAll(/\b(speaker_\d+|host|guest):\s*/gi, '')
@@ -135,6 +148,7 @@ async function synthesizeSingleVoice(
     voice: VOICE_1,
     speed,
     model: 'tts-1-hd',
+    languageCode,
   });
 }
 
@@ -158,7 +172,8 @@ export async function generatePodcastTts(
     .from(supportedLanguages)
     .where(eq(supportedLanguages.id, row.languageId))
     .limit(1);
-  const langPrefix = (langRow?.code ?? 'en').split('-')[0];
+  const languageCode = langRow?.code ?? 'en';
+  const langPrefix = languageCode.split('-')[0];
   const level = (row.cefrLevel ?? 'A1').toUpperCase();
   const speed = TTS_SPEED_BY_CEFR[level] ?? 1;
 
@@ -166,8 +181,8 @@ export async function generatePodcastTts(
   const allLines = getScriptLines(row);
   const audioBuffer =
     allLines.length >= 2
-      ? await synthesizeMultiSpeaker(tts, allLines, speed)
-      : await synthesizeSingleVoice(tts, row.transcript, speed);
+      ? await synthesizeMultiSpeaker(tts, allLines, speed, languageCode)
+      : await synthesizeSingleVoice(tts, row.transcript, speed, languageCode);
 
   const key = `podcasts/${langPrefix}/${level}/${crypto.randomUUID()}.mp3`;
   const storage = new S3StorageGateway();
