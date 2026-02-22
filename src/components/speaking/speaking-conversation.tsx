@@ -232,13 +232,18 @@ function MicButton({
   const label = isRecording
     ? t('speaking.stopMicrophone')
     : t('speaking.startMicrophone');
+  const helperKey = isRecording
+    ? 'speaking.micHelperRecording'
+    : 'speaking.micHelperIdle';
+  const helperId = 'speaking-mic-helper';
   return (
-    <div className="mt-6 flex justify-center">
+    <div className="mt-6 flex flex-col items-center gap-3">
       <button
         type="button"
         onClick={isRecording ? onStopRecording : onStartRecording}
         disabled={isProcessing || isTutorSpeaking}
-        className={`flex h-14 w-14 items-center justify-center rounded-full border-2 transition disabled:opacity-50 ${
+        aria-describedby={helperId}
+        className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-full border-2 transition disabled:opacity-50 ${
           isRecording
             ? 'border-(--red) bg-(--red-bg) text-(--red)'
             : 'border-(--border) bg-(--bg-elevated) text-(--text-muted) hover:border-(--accent) hover:text-(--accent)'
@@ -264,6 +269,12 @@ function MicButton({
           <line x1="12" y1="19" x2="12" y2="22" />
         </svg>
       </button>
+      <p
+        id={helperId}
+        className="max-w-[min(20rem,100%)] text-center text-sm text-(--text-muted)"
+      >
+        {t(helperKey)}
+      </p>
     </div>
   );
 }

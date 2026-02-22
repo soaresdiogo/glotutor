@@ -1,7 +1,8 @@
 'use client';
 
 import { useId, useState } from 'react';
-import { Sidebar, TopBar } from '@/components/dashboard';
+import { AccountManageModal, Sidebar, TopBar } from '@/components/dashboard';
+import { AccountManageModalProvider } from '@/components/dashboard/account-manage-modal-provider';
 import { InactivityNudgeBanner } from '@/components/inactivity-nudge/InactivityNudgeBanner';
 import { AddLanguageModal } from '@/components/onboarding/AddLanguageModal';
 import { AddLanguageModalProvider } from '@/components/onboarding/AddLanguageModalProvider';
@@ -42,20 +43,23 @@ export default function DashboardLayout({
   return (
     <LanguageProvider>
       <AddLanguageModalProvider>
-        <div className="flex min-h-screen">
-          <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-          <div
-            id={mainContentId}
-            className="flex min-h-screen flex-1 flex-col transition-[margin] duration-300 md:ml-[280px]"
-          >
-            <TopBar onMenuClick={() => setSidebarOpen((v) => !v)} />
-            <div className="mb-4 px-4 pt-4 md:px-6 md:pt-6">
-              <InactivityNudgeBanner />
+        <AccountManageModalProvider>
+          <div className="flex min-h-screen">
+            <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+            <div
+              id={mainContentId}
+              className="flex min-h-screen flex-1 flex-col transition-[margin] duration-300 md:ml-[280px]"
+            >
+              <TopBar onMenuClick={() => setSidebarOpen((v) => !v)} />
+              <div className="mb-4 px-4 pt-4 md:px-6 md:pt-6">
+                <InactivityNudgeBanner />
+              </div>
+              {children}
             </div>
-            {children}
           </div>
-        </div>
-        <AddLanguageModal />
+          <AddLanguageModal />
+          <AccountManageModal />
+        </AccountManageModalProvider>
       </AddLanguageModalProvider>
     </LanguageProvider>
   );

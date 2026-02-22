@@ -1,5 +1,7 @@
+export { AccountManageModal } from './account-manage-modal';
 export { AchievementCard } from './achievement-card';
 export { ContinueCard } from './continue-card';
+export { DeleteAccountModal } from './delete-account-modal';
 export { ModuleCard } from './module-card';
 export { ProfileMenu } from './profile-menu';
 export { Sidebar } from './sidebar';

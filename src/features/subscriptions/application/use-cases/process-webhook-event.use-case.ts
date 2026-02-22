@@ -215,6 +215,8 @@ export class ProcessWebhookEventUseCase implements IProcessWebhookEventUseCase {
         ? new Date(sub.canceled_at * 1000)
         : new Date(),
     });
+    // LGPD/GDPR: when subscription ends, revoke access for users who requested deletion
+    await this.userRepo.setDeletedAtIfDeletionRequested(existing.userId);
   }
 
   private async handleInvoicePaymentSucceeded(
