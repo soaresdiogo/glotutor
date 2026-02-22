@@ -31,6 +31,12 @@ export const RegisterSchema = z
     confirmPassword: z
       .string()
       .min(1, { error: 'Please confirm your password' }),
+    acceptPrivacy: z.literal(true, {
+      message: 'You must accept the Privacy Policy to create an account.',
+    }),
+    acceptTerms: z.literal(true, {
+      message: 'You must accept the Terms of Use to create an account.',
+    }),
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: 'Passwords do not match',

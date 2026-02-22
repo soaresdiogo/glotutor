@@ -4,6 +4,8 @@ export type CreatePendingSignupInput = {
   fullName: string | null;
   planType: string;
   expiresAt: Date;
+  /** When the user accepted the privacy policy (mandatory for signup). */
+  privacyPolicyAcceptedAt: Date;
 };
 
 export type PendingSignupRecord = {
@@ -13,6 +15,7 @@ export type PendingSignupRecord = {
   fullName: string | null;
   planType: string;
   expiresAt: Date;
+  privacyPolicyAcceptedAt: Date | null;
 };
 
 export interface IPendingSignupRepository {

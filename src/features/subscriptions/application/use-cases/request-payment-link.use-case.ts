@@ -32,12 +32,14 @@ export class RequestPaymentLinkUseCase implements IRequestPaymentLinkUseCase {
     const expiresAt = new Date(
       Date.now() + PENDING_SIGNUP_EXPIRY_HOURS * 60 * 60 * 1000,
     );
+    const now = new Date();
     await this.pendingSignupRepo.upsert({
       email: dto.email,
       passwordHash,
       fullName: dto.fullName,
       planType: dto.planType,
       expiresAt,
+      privacyPolicyAcceptedAt: now,
     });
 
     const token = await signPaymentLinkToken({

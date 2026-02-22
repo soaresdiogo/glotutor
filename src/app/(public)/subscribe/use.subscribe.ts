@@ -36,6 +36,12 @@ const SubscribeFormSchema = z
       .pipe(z.email('Invalid email address')),
     password: strongPassword,
     confirmPassword: z.string().min(1, 'Please confirm your password'),
+    acceptPrivacy: z.boolean().refine((v) => v === true, {
+      message: 'You must accept the Privacy Policy to create an account.',
+    }),
+    acceptTerms: z.boolean().refine((v) => v === true, {
+      message: 'You must accept the Terms of Use to create an account.',
+    }),
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: 'Passwords do not match',
@@ -56,6 +62,8 @@ export function useSubscribe(planType: SubscribePlanType) {
   const idEmail = useId();
   const idPassword = useId();
   const idConfirm = useId();
+  const idAcceptPrivacy = useId();
+  const idAcceptTerms = useId();
 
   const form = useForm<SubscribeFormDto>({
     resolver: safeZodResolver<SubscribeFormDto>(SubscribeFormSchema),
@@ -65,6 +73,8 @@ export function useSubscribe(planType: SubscribePlanType) {
       email: '',
       password: '',
       confirmPassword: '',
+      acceptPrivacy: false,
+      acceptTerms: false,
     },
   });
 
@@ -85,6 +95,8 @@ export function useSubscribe(planType: SubscribePlanType) {
             planType,
             password: data.password,
             confirmPassword: data.confirmPassword,
+            acceptPrivacy: true,
+            acceptTerms: true,
           },
         })
         .json<{ success: boolean }>();
@@ -110,11 +122,18 @@ export function useSubscribe(planType: SubscribePlanType) {
 
   const emailSent = subscribeMutation.isSuccess;
 
+  const isValid =
+    form.formState.isValid &&
+    form.watch('acceptPrivacy') === true &&
+    form.watch('acceptTerms') === true;
+
   return {
     idName,
     idEmail,
     idPassword,
     idConfirm,
+    idAcceptPrivacy,
+    idAcceptTerms,
     form,
     showError,
     password,
@@ -122,5 +141,6 @@ export function useSubscribe(planType: SubscribePlanType) {
     subscribeMutation,
     onSubmit,
     emailSent,
+    isValid,
   };
 }

@@ -28,7 +28,31 @@ export const CreateCheckoutSessionSchema = z
     accountId: z.string().uuid().optional(),
     password: z.string().optional(),
     confirmPassword: z.string().optional(),
+    acceptPrivacy: z.boolean().optional(),
+    acceptTerms: z.boolean().optional(),
   })
+  .refine(
+    (data) => {
+      const isNewSignup = data.password != null && data.password.length > 0;
+      if (isNewSignup) return data.acceptPrivacy === true;
+      return true;
+    },
+    {
+      message: 'You must accept the Privacy Policy to create an account.',
+      path: ['acceptPrivacy'],
+    },
+  )
+  .refine(
+    (data) => {
+      const isNewSignup = data.password != null && data.password.length > 0;
+      if (isNewSignup) return data.acceptTerms === true;
+      return true;
+    },
+    {
+      message: 'You must accept the Terms of Use to create an account.',
+      path: ['acceptTerms'],
+    },
+  )
   .refine(
     (data) => {
       if (data.password != null || data.confirmPassword != null) {

@@ -19,6 +19,7 @@ export class PendingSignupRepository implements IPendingSignupRepository {
         fullName: data.fullName,
         planType: data.planType,
         expiresAt: data.expiresAt,
+        privacyPolicyAcceptedAt: data.privacyPolicyAcceptedAt,
       })
       .onConflictDoUpdate({
         target: pendingSignups.email,
@@ -27,6 +28,7 @@ export class PendingSignupRepository implements IPendingSignupRepository {
           fullName: data.fullName,
           planType: data.planType,
           expiresAt: data.expiresAt,
+          privacyPolicyAcceptedAt: data.privacyPolicyAcceptedAt,
         },
       });
   }
@@ -46,6 +48,7 @@ export class PendingSignupRepository implements IPendingSignupRepository {
       fullName: row.fullName,
       planType: row.planType,
       expiresAt: row.expiresAt,
+      privacyPolicyAcceptedAt: row.privacyPolicyAcceptedAt,
     };
   }
 

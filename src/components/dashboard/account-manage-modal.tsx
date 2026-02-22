@@ -7,6 +7,8 @@ import type { MySubscriptionResponse } from '@/client-api/subscriptions.api';
 import { subscriptionsApi } from '@/client-api/subscriptions.api';
 import { useTranslate } from '@/locales';
 import { useAccountManageModal } from './account-manage-modal-provider';
+import { PrivacyPolicyModal } from './privacy-policy-modal';
+import { TermsOfUseModal } from './terms-of-use-modal';
 
 type View = 'options' | 'subscription' | 'confirm_cancel_subscription';
 
@@ -90,6 +92,8 @@ export function AccountManageModal() {
   const [view, setView] = useState<View>('options');
   const [cancelPhraseInput, setCancelPhraseInput] = useState('');
   const [cancelPhraseError, setCancelPhraseError] = useState(false);
+  const [privacyModalOpen, setPrivacyModalOpen] = useState(false);
+  const [termsModalOpen, setTermsModalOpen] = useState(false);
   const titleId = useId();
   const cancelPhraseErrorId = useId();
 
@@ -206,15 +210,43 @@ export function AccountManageModal() {
               <p className="mb-6 text-sm text-(--text-muted)">
                 {t('profile.manageAccountDescription')}
               </p>
-              <button
-                type="button"
-                onClick={() => setView('subscription')}
-                className="w-full rounded-xl border-2 border-(--border) bg-(--bg-card) px-4 py-3 text-left font-medium text-(--text) transition hover:border-(--accent/50) hover:bg-(--bg-elevated)"
-              >
-                {subscription
-                  ? t('profile.manageSubscription')
-                  : t('profile.subscription')}
-              </button>
+              <div className="flex flex-col gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => setView('subscription')}
+                  className="w-full rounded-xl border-2 border-(--border) bg-(--bg-card) px-4 py-3 text-left font-medium text-(--text) transition hover:border-(--accent/50) hover:bg-(--bg-elevated)"
+                >
+                  {subscription
+                    ? t('profile.manageSubscription')
+                    : t('profile.subscription')}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setTermsModalOpen(true)}
+                  className="w-full rounded-xl border-2 border-(--border) bg-(--bg-card) px-4 py-3 text-left font-medium text-(--text) transition hover:border-(--accent/50) hover:bg-(--bg-elevated)"
+                >
+                  {t('profile.termsOfUse')}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPrivacyModalOpen(true)}
+                  className="w-full rounded-xl border-2 border-(--border) bg-(--bg-card) px-4 py-3 text-left font-medium text-(--text) transition hover:border-(--accent/50) hover:bg-(--bg-elevated)"
+                >
+                  {t('profile.privacyPolicy')}
+                </button>
+              </div>
+              <PrivacyPolicyModal
+                open={privacyModalOpen}
+                onClose={() => setPrivacyModalOpen(false)}
+              />
+              <TermsOfUseModal
+                open={termsModalOpen}
+                onClose={() => setTermsModalOpen(false)}
+                onOpenPrivacy={() => {
+                  setTermsModalOpen(false);
+                  setPrivacyModalOpen(true);
+                }}
+              />
             </>
           )}
 
