@@ -274,7 +274,7 @@ async function generateContent(
     return JSON.parse(raw) as unknown;
   } catch {
     throw new Error(
-      'OpenAI did not return valid JSON. Raw: ' + raw.slice(0, 200),
+      `OpenAI did not return valid JSON. Raw: ${raw.slice(0, 200)}`,
     );
   }
 }
