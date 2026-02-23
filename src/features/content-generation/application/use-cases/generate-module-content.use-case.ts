@@ -256,7 +256,7 @@ function buildLessonGrammarPatchPart(
   const maxLen = 40000;
   const truncated =
     currentJson.length > maxLen
-      ? currentJson.slice(0, maxLen) + '...[truncated]'
+      ? `${currentJson.slice(0, maxLen)}...[truncated]`
       : currentJson;
   return [
     `FIX GRAMMAR TERMINOLOGY: The lesson was rejected because the word "${k.detectedTerm}" (grammar terminology) was found. Grammar must be invisible to the learner.`,
@@ -967,7 +967,7 @@ export class GenerateModuleContentUseCase
   private logPatchResponseKeys(
     pass: ContentPass,
     patchAttempt: number,
-    maxPatch: number,
+    _maxPatch: number,
     patchJson: Record<string, unknown>,
     onProgress?: (message: string) => void,
   ): void {

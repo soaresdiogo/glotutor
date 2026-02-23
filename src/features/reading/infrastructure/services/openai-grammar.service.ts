@@ -46,7 +46,7 @@ export class OpenAIGrammarService implements IGrammarAnalysisService {
 
     const truncatedText =
       input.textContent.length > this.maxTextLength
-        ? input.textContent.substring(0, this.maxTextLength) + '...'
+        ? `${input.textContent.substring(0, this.maxTextLength)}...`
         : input.textContent;
 
     const limited = await this.callOpenAIAndParse(

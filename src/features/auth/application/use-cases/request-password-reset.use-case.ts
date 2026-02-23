@@ -1,4 +1,4 @@
-import { randomBytes } from 'crypto';
+import { randomBytes } from 'node:crypto';
 import type { IPasswordResetRepository } from '@/features/auth/domain/repositories/password-reset-repository.interface';
 import type { IUserRepository } from '@/features/users/domain/repositories/user-repository.interface';
 import type { EmailService } from '@/infrastructure/services/email/email.service';

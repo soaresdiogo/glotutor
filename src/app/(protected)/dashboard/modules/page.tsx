@@ -1,6 +1,5 @@
 'use client';
 
-import Link from 'next/link';
 import { useId } from 'react';
 import { ModuleCard } from '@/components/dashboard';
 import { useProgress } from '@/hooks/use-progress';

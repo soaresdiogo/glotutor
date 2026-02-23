@@ -76,7 +76,7 @@ export class StartPlacementTestUseCase implements IStartPlacementTestUseCase {
         })),
       );
       const totalAnswered = answers.length;
-      const currentLevel = answers.at(-1)!.cefrLevel;
+      const currentLevel = answers.at(-1)?.cefrLevel ?? 'A1';
       const decision = getAdaptiveDecision(
         answersByLevel,
         currentLevel,
