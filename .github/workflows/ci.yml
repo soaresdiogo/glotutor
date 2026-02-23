@@ -72,7 +72,33 @@ jobs:
           echo "${{ secrets.VPS_SSH_KEY }}" | base64 --decode > /tmp/ssh_key
           chmod 600 /tmp/ssh_key
       - name: Check runner IP
-        run: curl -s https://api.ipify.org
+        run: |
+          echo "Runner outbound IP (add to VPS firewall if needed):"
+          curl -s https://api.ipify.org
+          echo ""
+          echo "Note: GitHub Actions IPs can change; consider whitelisting GitHub's IP range."
+
+      # #region agent log — diagnostics for VPS timeout (hypotheses A–E)
+      - name: Diagnose — TCP reachability to VPS (port 22)
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+        run: |
+          echo "Testing TCP connection to VPS_HOST:22 (timeout 15s)..."
+          if timeout 15 bash -c "cat < /dev/null > /dev/tcp/$VPS_HOST/22" 2>/dev/null; then
+            echo "TCP_OK: Port 22 reachable."
+          else
+            echo "TCP_FAIL: Cannot reach port 22 (firewall/network/VPS down?). Exit: $?"
+          fi
+      # #endregion
+
+      # #region agent log — SSH verbose to capture timeout vs auth error
+      - name: Diagnose — SSH first connection (verbose, 15s timeout)
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+        run: |
+          ssh -v -o ConnectTimeout=15 -o StrictHostKeyChecking=no -i /tmp/ssh_key "$VPS_USER@$VPS_HOST" "echo SSH_OK" 2>&1 || true
+      # #endregion
 
       - name: Run migrations via SSH inside Docker container
         uses: appleboy/ssh-action@v1
