@@ -1,3 +1,4 @@
+import type { PricePlanEntity } from '@/features/subscriptions/domain/entities/price-plan.entity';
 import type { IPendingSignupRepository } from '@/features/subscriptions/domain/repositories/pending-signup-repository.interface';
 import type { IPriceRepository } from '@/features/subscriptions/domain/repositories/price-repository.interface';
 import type { ISubscriptionRepository } from '@/features/subscriptions/domain/repositories/subscription-repository.interface';
@@ -29,6 +30,7 @@ export class CreateCheckoutSessionUseCase
 
   private async validateConsentAndUpsertPendingSignup(
     dto: CreateCheckoutSessionDto,
+    planType: string,
   ): Promise<void> {
     const password = dto.password;
     if (!password || password.length === 0) return;
@@ -54,7 +56,7 @@ export class CreateCheckoutSessionUseCase
       email: dto.email,
       passwordHash,
       fullName: dto.fullName,
-      planType: dto.planType,
+      planType,
       expiresAt,
       privacyPolicyAcceptedAt: now,
     });
@@ -87,20 +89,57 @@ export class CreateCheckoutSessionUseCase
     return customer.id;
   }
 
-  async execute(
+  private async resolvePlan(
     dto: CreateCheckoutSessionDto,
-    context: { tenantId: string; successUrl: string; cancelUrl: string },
-  ): Promise<CreateCheckoutResponseDto> {
-    const plan = await this.priceRepo.findActiveRecurringByTenantAndPlanType(
-      context.tenantId,
-      dto.planType,
-    );
-    if (!plan) {
-      throw new BadRequestError(
-        `No active subscription plan found for type: ${dto.planType}`,
-        'subscriptions.planNotFound',
+    tenantId: string,
+    planType: string | null,
+    currency: string | null,
+    interval: string | null,
+  ): Promise<PricePlanEntity> {
+    if (dto.priceId) {
+      const plan = await this.priceRepo.findActiveRecurringByTenantAndPriceId(
+        tenantId,
+        dto.priceId,
       );
+      if (!plan) {
+        throw new BadRequestError(
+          'Invalid or inactive price for this tenant.',
+          'subscriptions.planNotFound',
+        );
+      }
+      return plan;
     }
+    if (
+      planType &&
+      currency &&
+      (interval === 'month' || interval === 'annual')
+    ) {
+      const plan =
+        await this.priceRepo.findActiveRecurringByTenantPlanTypeCurrencyAndInterval(
+          tenantId,
+          planType,
+          currency,
+          interval,
+        );
+      if (plan) return plan;
+    }
+    if (planType) {
+      const plan = await this.priceRepo.findActiveRecurringByTenantAndPlanType(
+        tenantId,
+        planType,
+      );
+      if (plan) return plan;
+    }
+    const detail =
+      planType && currency && interval
+        ? `No price found for plan=${planType}, currency=${currency}, interval=${interval}.`
+        : `No active subscription plan found for type: ${planType ?? 'unknown'}.`;
+    throw new BadRequestError(detail, 'subscriptions.planNotFound');
+  }
+
+  private async resolveValidStripePriceId(
+    plan: PricePlanEntity,
+  ): Promise<string> {
     const stripePriceId = plan.stripePriceId;
     if (!stripePriceId?.startsWith('price_')) {
       throw new BadRequestError(
@@ -115,15 +154,36 @@ export class CreateCheckoutSessionUseCase
         'subscriptions.nonRecurringPrice',
       );
     }
+    return stripePriceId;
+  }
 
-    await this.validateConsentAndUpsertPendingSignup(dto);
+  async execute(
+    dto: CreateCheckoutSessionDto,
+    context: { tenantId: string; successUrl: string; cancelUrl: string },
+  ): Promise<CreateCheckoutResponseDto> {
+    const planType =
+      dto.planType != null && dto.planType.length > 0 ? dto.planType : null;
+    const currency =
+      dto.currency != null && dto.currency.length > 0 ? dto.currency : null;
+    const interval = dto.interval ?? null;
+
+    const plan = await this.resolvePlan(
+      dto,
+      context.tenantId,
+      planType,
+      currency,
+      interval,
+    );
+    const stripePriceId = await this.resolveValidStripePriceId(plan);
+
+    await this.validateConsentAndUpsertPendingSignup(dto, plan.planType);
     const customerId = await this.resolveCustomerId(dto, context.tenantId);
 
     const metadata: Record<string, string> = {
       tenantId: context.tenantId,
       email: dto.email,
       fullName: dto.fullName,
-      planType: dto.planType,
+      planType: plan.planType,
       planId: plan.priceId,
       priceId: plan.priceId,
     };

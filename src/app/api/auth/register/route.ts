@@ -19,7 +19,8 @@ export async function POST(req: NextRequest) {
     await getTenantFromRequest(req);
     const dto = RegisterSchema.parse(await req.json());
     const registerUseCase = makeRegisterUseCase();
-    const { userId, email } = await registerUseCase.execute(dto);
+    const locale = getLocaleFromRequest(req);
+    const { userId, email } = await registerUseCase.execute(dto, locale);
 
     // Prefer first active language; fallback to any language so new users always get a profile.
     const defaultLang =

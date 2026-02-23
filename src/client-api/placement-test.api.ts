@@ -21,6 +21,7 @@ export type PlacementAnswerResponseNext = {
   kind: 'next';
   question: PlacementQuestion;
   questionsAnswered: number;
+  totalQuestions: number;
 };
 
 export type PlacementAnswerResponseResult = {

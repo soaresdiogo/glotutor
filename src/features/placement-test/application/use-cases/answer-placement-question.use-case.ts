@@ -13,6 +13,7 @@ export type AnswerPlacementResult =
       kind: 'next';
       question: PlacementQuestionEntity;
       questionsAnswered: number;
+      totalQuestions: number;
     }
   | {
       kind: 'result';
@@ -136,14 +137,16 @@ export class AnswerPlacementQuestionUseCase
       };
     }
 
+    const newTotal = totalAnswered + 1;
     await this.attemptRepo.update(attemptId, {
-      totalQuestions: totalAnswered + 1,
+      totalQuestions: newTotal,
     });
 
     return {
       kind: 'next',
       question: nextQuestions[0],
       questionsAnswered: totalAnswered,
+      totalQuestions: newTotal,
     };
   }
 }

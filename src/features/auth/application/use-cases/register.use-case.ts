@@ -16,7 +16,10 @@ const TERMS_OF_USE_CONSENT_VERSION = '2026-01-17';
 const TERMS_OF_USE_CONSENT_TYPE = 'terms_of_use';
 
 export interface IRegisterUseCase {
-  execute(dto: RegisterDto): Promise<{ userId: string; email: string }>;
+  execute(
+    dto: RegisterDto,
+    locale?: string | null,
+  ): Promise<{ userId: string; email: string }>;
 }
 
 export class RegisterUseCase implements IRegisterUseCase {
@@ -27,7 +30,10 @@ export class RegisterUseCase implements IRegisterUseCase {
     private readonly consentRecordRepo: IConsentRecordRepository,
   ) {}
 
-  async execute(dto: RegisterDto): Promise<{ userId: string; email: string }> {
+  async execute(
+    dto: RegisterDto,
+    locale?: string | null,
+  ): Promise<{ userId: string; email: string }> {
     const existing = await this.userRepo.findByEmail(dto.email);
     if (existing) {
       throw new BadRequestError(
@@ -41,6 +47,7 @@ export class RegisterUseCase implements IRegisterUseCase {
       email: dto.email,
       passwordHash,
       name: dto.name ?? null,
+      locale: locale ?? null,
     });
 
     const now = new Date();
@@ -72,7 +79,11 @@ export class RegisterUseCase implements IRegisterUseCase {
 
     const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
     const verifyLink = `${appUrl}/verify-email?token=${encodeURIComponent(token)}`;
-    await this.emailService.sendVerificationEmail(user.email, verifyLink);
+    await this.emailService.sendVerificationEmail(
+      user.email,
+      verifyLink,
+      locale,
+    );
 
     return { userId: user.userId, email: user.email };
   }

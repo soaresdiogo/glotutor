@@ -1,0 +1,1 @@
+ALTER TABLE "pending_signups" ADD COLUMN "locale" varchar(10);

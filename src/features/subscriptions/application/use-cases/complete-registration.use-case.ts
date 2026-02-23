@@ -182,12 +182,14 @@ export class CompleteRegistrationUseCase
     const passwordHash = pending
       ? await this.consumePendingSignupPassword(ctx.email, pending.passwordHash)
       : await this.generateRandomPasswordHash();
+    const locale = pending?.locale ?? null;
 
     const created = await this.userRepo.create({
       email: ctx.email,
       passwordHash,
       name: ctx.fullName,
       tenantId: ctx.tenantId,
+      locale,
     });
     await this.userRepo.updateEmailVerified(created.userId, true);
     await this.userRepo.updateStatus(created.userId, 'active');

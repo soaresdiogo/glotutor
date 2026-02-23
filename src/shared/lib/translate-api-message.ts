@@ -7,6 +7,16 @@ import { SUPPORTED_LOCALES } from '@/locales/types';
 const SUPPORTED_SET = new Set<string>(SUPPORTED_LOCALES);
 
 /**
+ * Normalizes a single locale string (e.g. "en-US", "pt-BR") to a supported LocaleCode.
+ * Used for DB-stored locale or request locale when sending emails.
+ */
+export function toLocaleCode(value: string | null | undefined): LocaleCode {
+  if (!value || typeof value !== 'string') return 'en';
+  const code = value.trim().split('-')[0]?.toLowerCase();
+  return (code && SUPPORTED_SET.has(code) ? code : 'en') as LocaleCode;
+}
+
+/**
  * Resolves Accept-Language header value to a supported locale (e.g. "pt-BR,en;q=0.9" -> "pt").
  */
 export function getLocaleFromAcceptLanguage(
