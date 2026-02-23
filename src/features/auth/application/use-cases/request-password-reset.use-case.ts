@@ -1,4 +1,4 @@
-import { randomBytes } from 'crypto';
+import { randomBytes } from 'node:crypto';
 import type { IPasswordResetRepository } from '@/features/auth/domain/repositories/password-reset-repository.interface';
 import type { IUserRepository } from '@/features/users/domain/repositories/user-repository.interface';
 import type { EmailService } from '@/infrastructure/services/email/email.service';
@@ -38,6 +38,10 @@ export class RequestPasswordResetUseCase
     const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
     const resetLink = `${appUrl}/reset-password?token=${encodeURIComponent(token)}`;
 
-    await this.emailService.sendPasswordResetEmail(user.email, resetLink);
+    await this.emailService.sendPasswordResetEmail(
+      user.email,
+      resetLink,
+      user.locale,
+    );
   }
 }

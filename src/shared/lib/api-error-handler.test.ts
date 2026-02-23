@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { type ZodError, z } from 'zod';
 import { apiErrorHandler } from './api-error-handler';
-import { AppError, BadRequestError, UnauthorizedError } from './errors';
+import { BadRequestError, UnauthorizedError } from './errors';
 
 describe('apiErrorHandler', () => {
   it('should return 400 with flattened messages for ZodError', async () => {

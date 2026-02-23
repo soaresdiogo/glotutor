@@ -162,7 +162,7 @@ function printSummary(results: Result[], totalMs: number): void {
   const succeeded = results.filter((r) => r.ok).length;
   const failed = results.filter((r) => !r.ok).length;
   const totalTokens = results.reduce((sum, r) => sum + (r.tokensUsed ?? 0), 0);
-  console.log('\n' + '═'.repeat(60));
+  console.log(`\n${'═'.repeat(60)}`);
   console.log('[run-commands-batch] Summary');
   console.log('═'.repeat(60));
   console.log(

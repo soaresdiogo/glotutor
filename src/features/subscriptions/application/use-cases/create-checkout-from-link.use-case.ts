@@ -38,6 +38,8 @@ export class CreateCheckoutFromLinkUseCase
         email: payload.email,
         fullName: payload.fullName,
         planType: payload.planType,
+        currency: payload.currency,
+        interval: payload.interval,
       },
       context,
     );

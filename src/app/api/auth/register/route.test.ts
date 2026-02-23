@@ -59,14 +59,17 @@ describe('POST /api/auth/register', () => {
       userId: 'user-1',
       email: 'new@example.com',
     });
-    expect(execute).toHaveBeenCalledWith({
-      name: 'New User',
-      email: 'new@example.com',
-      password: 'Password1!',
-      confirmPassword: 'Password1!',
-      acceptPrivacy: true,
-      acceptTerms: true,
-    });
+    expect(execute).toHaveBeenCalledWith(
+      {
+        name: 'New User',
+        email: 'new@example.com',
+        password: 'Password1!',
+        confirmPassword: 'Password1!',
+        acceptPrivacy: true,
+        acceptTerms: true,
+      },
+      expect.any(String),
+    );
   });
 
   it('should return 400 when validation fails', async () => {

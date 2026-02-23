@@ -49,6 +49,28 @@ export class DrizzlePlacementQuestionRepository
     limit: number,
     excludeIds: string[] = [],
   ): Promise<PlacementQuestionEntity[]> {
+    // #region agent log
+    fetch('http://127.0.0.1:7244/ingest/585dfbd9-11ed-4a7b-8723-960821f4c7ae', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Debug-Session-Id': 'eff39f',
+      },
+      body: JSON.stringify({
+        sessionId: 'eff39f',
+        location: 'placement-question.repository.ts:findRandom',
+        message: 'findRandomByLanguageAndLevel params',
+        data: {
+          language,
+          cefrLevel,
+          limit,
+          excludeIdsLength: excludeIds.length,
+        },
+        timestamp: Date.now(),
+        hypothesisId: 'B',
+      }),
+    }).catch(() => {});
+    // #endregion
     const conditions = [
       eq(placementTestQuestions.language, language),
       eq(placementTestQuestions.cefrLevel, cefrLevel),
@@ -63,6 +85,36 @@ export class DrizzlePlacementQuestionRepository
       .where(and(...conditions))
       .orderBy(sql`random()`)
       .limit(limit);
+    // #region agent log
+    let countSameLangLevel: number | undefined;
+    if (rows.length === 0) {
+      const countResult = await this.db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(placementTestQuestions)
+        .where(
+          and(
+            eq(placementTestQuestions.language, language),
+            eq(placementTestQuestions.cefrLevel, cefrLevel),
+          ),
+        );
+      countSameLangLevel = countResult[0]?.count ?? 0;
+    }
+    fetch('http://127.0.0.1:7244/ingest/585dfbd9-11ed-4a7b-8723-960821f4c7ae', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Debug-Session-Id': 'eff39f',
+      },
+      body: JSON.stringify({
+        sessionId: 'eff39f',
+        location: 'placement-question.repository.ts:findRandomResult',
+        message: 'findRandomByLanguageAndLevel result',
+        data: { rowsLength: rows.length, countSameLangLevel },
+        timestamp: Date.now(),
+        hypothesisId: 'B',
+      }),
+    }).catch(() => {});
+    // #endregion
     return rows.map(toEntity);
   }
 

@@ -57,7 +57,20 @@ export function parsePlanFromQuery(plan: string | null): SubscribePlanType {
   return 'pro';
 }
 
-export function useSubscribe(planType: SubscribePlanType) {
+export type SubscribeUrlParams = {
+  currency?: string | null;
+  interval?: 'month' | 'annual' | null;
+  /** Language from URL (?language=pt). Used for payment-link email and saved as user.locale after signup. */
+  language?: string | null;
+};
+
+export function useSubscribe(
+  planType: SubscribePlanType,
+  urlParams?: SubscribeUrlParams,
+) {
+  const currency = urlParams?.currency ?? null;
+  const interval = urlParams?.interval ?? null;
+  const language = urlParams?.language ?? null;
   const idName = useId();
   const idEmail = useId();
   const idPassword = useId();
@@ -87,17 +100,21 @@ export function useSubscribe(planType: SubscribePlanType) {
 
   const subscribeMutation = useMutation({
     mutationFn: async (data: SubscribeFormDto) => {
+      const body: Record<string, unknown> = {
+        fullName: data.name,
+        email: data.email,
+        planType,
+        password: data.password,
+        confirmPassword: data.confirmPassword,
+        acceptPrivacy: true,
+        acceptTerms: true,
+      };
+      if (currency) body.currency = currency;
+      if (interval) body.interval = interval;
+      if (language) body.locale = language;
       await httpClient
         .post('subscriptions/request-payment-link', {
-          json: {
-            fullName: data.name,
-            email: data.email,
-            planType,
-            password: data.password,
-            confirmPassword: data.confirmPassword,
-            acceptPrivacy: true,
-            acceptTerms: true,
-          },
+          json: body,
         })
         .json<{ success: boolean }>();
     },

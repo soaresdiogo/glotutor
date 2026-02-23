@@ -41,6 +41,7 @@ export const PlacementPresenter = {
         kind: 'next',
         question: this.questionToDto(result.question),
         questionsAnswered: result.questionsAnswered,
+        totalQuestions: result.totalQuestions,
       };
     }
     return {

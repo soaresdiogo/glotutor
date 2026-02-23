@@ -50,6 +50,7 @@ describe('InitiateMfaUseCase', () => {
     expect(mockEmailService.sendMfaCodeEmail).toHaveBeenCalledWith(
       'user@example.com',
       expect.any(String),
+      null,
     );
   });
 

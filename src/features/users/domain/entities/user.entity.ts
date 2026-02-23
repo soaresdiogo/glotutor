@@ -10,4 +10,6 @@ export type UserEntity = {
   mfaEnabled: boolean;
   status: string;
   lastLoginAt: Date | null;
+  /** User's UI locale (e.g. "en-US", "pt-BR") for emails and app language. */
+  locale: string | null;
 };

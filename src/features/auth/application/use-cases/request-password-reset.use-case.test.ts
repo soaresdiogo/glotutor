@@ -42,6 +42,7 @@ describe('RequestPasswordResetUseCase', () => {
     expect(mockEmailService.sendPasswordResetEmail).toHaveBeenCalledWith(
       'user@example.com',
       expect.stringContaining('reset-password'),
+      null,
     );
   });
 

@@ -19,6 +19,12 @@ const strongPassword = z
 export const RequestPaymentLinkSchema = z
   .object({
     planType: z.string().min(1, 'Plan type is required'),
+    /** Language from landing/subscribe URL (?language=pt). Used for email and saved as user.locale after payment. */
+    locale: z.string().min(1).max(10).optional(),
+    /** From URL ?currency=EUR - optional, used to resolve exact price when opening checkout from link */
+    currency: z.string().min(1).max(5).optional(),
+    /** From URL ?interval=month | annual */
+    interval: z.enum(['month', 'annual']).optional(),
     email: z
       .string()
       .min(1, 'Email is required')

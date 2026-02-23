@@ -73,6 +73,7 @@ export function usePlacementTest(language: string) {
         setState((s) => ({
           ...s,
           questionsAnswered: data.questionsAnswered,
+          totalQuestions: data.totalQuestions,
           currentQuestion: data.question,
           error: null,
         }));

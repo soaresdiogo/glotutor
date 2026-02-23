@@ -53,7 +53,7 @@ export class InitiateMfaUseCase implements IInitiateMfaUseCase {
       expiresAt,
     });
 
-    await this.emailService.sendMfaCodeEmail(user.email, mfaCode);
+    await this.emailService.sendMfaCodeEmail(user.email, mfaCode, user.locale);
 
     return { sessionId: session.sessionId };
   }

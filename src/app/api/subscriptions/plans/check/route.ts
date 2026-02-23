@@ -9,9 +9,20 @@ export async function GET(req: NextRequest) {
   try {
     const tenant = await getTenantFromRequest(req);
     const plan = req.nextUrl.searchParams.get('plan') ?? undefined;
+    const currency = req.nextUrl.searchParams.get('currency') ?? undefined;
+    const intervalParam = req.nextUrl.searchParams.get('interval') ?? undefined;
+    const interval =
+      intervalParam === 'month' || intervalParam === 'annual'
+        ? intervalParam
+        : undefined;
+
     const result = await makeCheckSubscriptionAvailabilityUseCase().execute(
       tenant.id,
-      plan ?? null,
+      {
+        planType: plan ?? null,
+        currency: currency ?? null,
+        interval: interval ?? null,
+      },
     );
     return NextResponse.json({
       available: result.available,

@@ -7,7 +7,10 @@ import { nativeLessonsApi } from '@/client-api/native-lessons.api';
 export function useLessonResults(lessonId: string | null) {
   const lessonQuery = useQuery({
     queryKey: ['native-lesson', lessonId],
-    queryFn: () => nativeLessonsApi.getLesson(lessonId!),
+    queryFn: async () => {
+      if (lessonId == null) throw new Error('Lesson ID is required');
+      return nativeLessonsApi.getLesson(lessonId);
+    },
     enabled: !!lessonId,
   });
 

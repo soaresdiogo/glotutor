@@ -17,6 +17,7 @@ export const UserMapper = {
       mfaEnabled: row.mfaEnabled,
       status: row.status,
       lastLoginAt: row.lastLoginAt,
+      locale: row.locale ?? null,
     };
   },
 };

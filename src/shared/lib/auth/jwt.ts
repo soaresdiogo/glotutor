@@ -161,6 +161,8 @@ export type PaymentLinkTokenPayload = {
   email: string;
   fullName: string;
   planType: string;
+  currency?: string;
+  interval?: 'month' | 'annual';
   iat: number;
   exp: number;
   iss: string;
@@ -171,16 +173,26 @@ export async function signPaymentLinkToken(payload: {
   email: string;
   fullName: string;
   planType: string;
+  currency?: string;
+  interval?: 'month' | 'annual';
 }): Promise<string> {
   const { privateKey } = await getKeyPair();
   const iss = (env as { JWT_ISSUER?: string }).JWT_ISSUER ?? 'glotutor';
 
-  return new jose.SignJWT({
+  const body: Record<string, unknown> = {
     type: 'payment-link',
     email: payload.email.toLowerCase(),
     fullName: payload.fullName,
     planType: payload.planType,
-  })
+  };
+  if (payload.currency != null && payload.currency.length > 0) {
+    body.currency = payload.currency;
+  }
+  if (payload.interval != null) {
+    body.interval = payload.interval;
+  }
+
+  return new jose.SignJWT(body)
     .setProtectedHeader({ alg: 'RS256', typ: 'JWT' })
     .setIssuer(iss)
     .setAudience(PAYMENT_LINK_AUDIENCE)

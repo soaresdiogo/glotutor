@@ -11,7 +11,9 @@ function chunk(arr, size) {
 
 // CSpell ignores src/locales/*.json; if only those are passed it checks 0 files and exits 1.
 function withoutLocaleJson(files) {
-  return files.filter((f) => !(f.includes('src/locales/') && f.endsWith('.json')));
+  return files.filter(
+    (f) => !(f.includes('src/locales/') && f.endsWith('.json')),
+  );
 }
 
 module.exports = {
@@ -32,7 +34,11 @@ module.exports = {
             return `npx eslint --max-warnings=0 ${quoted}`;
           })
         : [`npx eslint --max-warnings=0 ${list}`];
-    return [...eslintCmds, `npx biome check --write ${list}`, `git add ${list}`];
+    return [
+      ...eslintCmds,
+      `npx biome check --write ${list}`,
+      `git add ${list}`,
+    ];
   },
   '**/*.{json,jsonc}': (filenames) => {
     if (!filenames.length) return [];

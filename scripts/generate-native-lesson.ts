@@ -32,7 +32,7 @@ if (!process.env.JWT_PUBLIC_KEY && !process.env.PUBLIC_KEY) {
 }
 
 const CEFR_LEVELS = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'] as const;
-const LANGUAGES = ['en', 'pt', 'es', 'it', 'fr', 'de'] as const;
+const _LANGUAGES = ['en', 'pt', 'es', 'it', 'fr', 'de'] as const;
 
 function parseArgs(): {
   language: string;
@@ -274,7 +274,7 @@ async function generateContent(
     return JSON.parse(raw) as unknown;
   } catch {
     throw new Error(
-      'OpenAI did not return valid JSON. Raw: ' + raw.slice(0, 200),
+      `OpenAI did not return valid JSON. Raw: ${raw.slice(0, 200)}`,
     );
   }
 }

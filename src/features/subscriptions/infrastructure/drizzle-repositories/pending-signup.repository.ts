@@ -20,6 +20,7 @@ export class PendingSignupRepository implements IPendingSignupRepository {
         planType: data.planType,
         expiresAt: data.expiresAt,
         privacyPolicyAcceptedAt: data.privacyPolicyAcceptedAt,
+        locale: data.locale ?? null,
       })
       .onConflictDoUpdate({
         target: pendingSignups.email,
@@ -29,6 +30,7 @@ export class PendingSignupRepository implements IPendingSignupRepository {
           planType: data.planType,
           expiresAt: data.expiresAt,
           privacyPolicyAcceptedAt: data.privacyPolicyAcceptedAt,
+          locale: data.locale ?? null,
         },
       });
   }
@@ -49,6 +51,7 @@ export class PendingSignupRepository implements IPendingSignupRepository {
       planType: row.planType,
       expiresAt: row.expiresAt,
       privacyPolicyAcceptedAt: row.privacyPolicyAcceptedAt,
+      locale: row.locale ?? null,
     };
   }
 

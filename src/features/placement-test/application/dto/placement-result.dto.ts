@@ -8,7 +8,12 @@ export type PlacementStartResponseDto = {
 };
 
 export type PlacementAnswerResponseDto =
-  | { kind: 'next'; question: PlacementQuestionDto; questionsAnswered: number }
+  | {
+      kind: 'next';
+      question: PlacementQuestionDto;
+      questionsAnswered: number;
+      totalQuestions: number;
+    }
   | {
       kind: 'result';
       recommendedLevel: string;

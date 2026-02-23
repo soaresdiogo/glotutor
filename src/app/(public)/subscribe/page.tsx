@@ -17,10 +17,23 @@ import { parsePlanFromQuery, useSubscribe } from './use.subscribe';
 type AvailabilityStatus = 'loading' | 'no_plans' | 'plan_not_found' | 'ok';
 
 export default function SubscribePage() {
-  const { t } = useTranslate();
+  const { t, locale: appLocale } = useTranslate();
   const searchParams = useSearchParams();
   const planParam = searchParams.get('plan');
+  const currencyParam = searchParams.get('currency');
+  const intervalParam = searchParams.get('interval');
+  const languageParam = searchParams.get('language');
   const planType = parsePlanFromQuery(planParam);
+  const currency =
+    currencyParam != null && currencyParam.length > 0 ? currencyParam : null;
+  const interval =
+    intervalParam === 'month' || intervalParam === 'annual'
+      ? intervalParam
+      : null;
+  const language =
+    languageParam != null && languageParam.length > 0
+      ? languageParam
+      : appLocale;
 
   const [status, setStatus] = useState<AvailabilityStatus>('loading');
   const [privacyModalOpen, setPrivacyModalOpen] = useState(false);
@@ -30,8 +43,11 @@ export default function SubscribePage() {
     let cancelled = false;
     (async () => {
       try {
+        const params = new URLSearchParams({ plan: planType });
+        if (currency) params.set('currency', currency);
+        if (interval) params.set('interval', interval);
         const res = await httpClient
-          .get(`subscriptions/plans/check?plan=${encodeURIComponent(planType)}`)
+          .get(`subscriptions/plans/check?${params.toString()}`)
           .json<{
             available: boolean;
             planFound: boolean;
@@ -54,7 +70,7 @@ export default function SubscribePage() {
     return () => {
       cancelled = true;
     };
-  }, [planType]);
+  }, [planType, currency, interval]);
 
   const {
     idName,
@@ -71,7 +87,7 @@ export default function SubscribePage() {
     onSubmit,
     emailSent,
     isValid,
-  } = useSubscribe(planType);
+  } = useSubscribe(planType, { currency, interval, language });
 
   const {
     register,
