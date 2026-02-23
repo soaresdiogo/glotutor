@@ -67,11 +67,16 @@ jobs:
     if: github.ref == 'refs/heads/main'            # only on main branch
 
     steps:
+      - name: Decode SSH key
+        run: |
+          echo "${{ secrets.VPS_SSH_KEY }}" | base64 --decode > /tmp/ssh_key
+          chmod 600 /tmp/ssh_key
+
       - name: Run migrations via SSH inside Docker container
         uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
-          key: ${{ secrets.VPS_SSH_KEY }}
+          key_path: /tmp/ssh_key
           script: |
             docker exec n48ocog800sksw0co4kssoow-093458758872 npx drizzle-kit migrate
