@@ -38,6 +38,10 @@ export class RequestPasswordResetUseCase
     const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
     const resetLink = `${appUrl}/reset-password?token=${encodeURIComponent(token)}`;
 
-    await this.emailService.sendPasswordResetEmail(user.email, resetLink);
+    await this.emailService.sendPasswordResetEmail(
+      user.email,
+      resetLink,
+      user.locale,
+    );
   }
 }

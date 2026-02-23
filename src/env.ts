@@ -16,7 +16,7 @@ const serverSchema = z.object({
   JWT_ACCESS_TOKEN_EXPIRATION_TIME: z.string().default('15m'),
   JWT_REFRESH_TOKEN_EXPIRATION_TIME: z.string().default('7d'),
   RESEND_API_KEY: z.string().optional(),
-  // Resend "from": use a verified domain email, or "Display Name <email@domain.com>"
+  // Resend "from": use a verified domain. Prefer no-reply@ for transactional emails (e.g. "Glotutor <no-reply@glotutor.com>")
   EMAIL_FROM: z.string().min(1).default('Glotutor <onboarding@resend.dev>'),
   // Reading feature (optional — graceful fallback when unset)
   REDIS_URL: z.url().optional(),

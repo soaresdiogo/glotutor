@@ -5,12 +5,15 @@ import { RequestPaymentLinkSchema } from '@/features/subscriptions/application/d
 import { makeRequestPaymentLinkUseCase } from '@/features/subscriptions/application/factories/request-payment-link.factory';
 import { apiErrorHandler } from '@/shared/lib/api-error-handler';
 import { getTenantFromRequest } from '@/shared/lib/require-tenant';
+import { getLocaleFromRequest } from '@/shared/lib/translate-api-message';
 
 export async function POST(req: NextRequest) {
   try {
     await getTenantFromRequest(req);
-    const dto = RequestPaymentLinkSchema.parse(await req.json());
-    await makeRequestPaymentLinkUseCase().execute(dto);
+    const body = await req.json();
+    const dto = RequestPaymentLinkSchema.parse(body);
+    const requestLocale = getLocaleFromRequest(req);
+    await makeRequestPaymentLinkUseCase().execute(dto, requestLocale);
     return NextResponse.json({ success: true });
   } catch (error) {
     return apiErrorHandler(error, req);

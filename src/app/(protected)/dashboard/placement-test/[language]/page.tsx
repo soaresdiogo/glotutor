@@ -7,6 +7,9 @@ import { ProgressBar } from '@/components/placement-test/ProgressBar';
 import { QuestionCard } from '@/components/placement-test/QuestionCard';
 import { usePlacementTest } from '@/hooks/placement-test';
 
+/** Must match backend PLACEMENT_MAX_QUESTIONS (cefr-levels.ts). */
+const PLACEMENT_MAX_QUESTIONS = 20;
+
 export default function PlacementTestPage() {
   const params = useParams();
   const router = useRouter();
@@ -78,12 +81,13 @@ export default function PlacementTestPage() {
         <section>
           <div className="mb-4 flex items-center justify-between text-sm text-(--text-muted)">
             <span>
-              Question {state.questionsAnswered + 1} of {state.totalQuestions}
+              Question {state.questionsAnswered + 1} of{' '}
+              {PLACEMENT_MAX_QUESTIONS}
             </span>
           </div>
           <ProgressBar
             current={state.questionsAnswered}
-            total={state.totalQuestions}
+            total={PLACEMENT_MAX_QUESTIONS}
             className="mb-6"
           />
           <QuestionCard

@@ -21,6 +21,27 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const language =
       typeof body?.language === 'string' ? body.language.trim() : '';
+    // #region agent log
+    fetch('http://127.0.0.1:7244/ingest/585dfbd9-11ed-4a7b-8723-960821f4c7ae', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Debug-Session-Id': 'eff39f',
+      },
+      body: JSON.stringify({
+        sessionId: 'eff39f',
+        location: 'placement-test/start/route.ts:body',
+        message: 'placement start body',
+        data: {
+          rawLanguage: body?.language,
+          language,
+          typeofLanguage: typeof body?.language,
+        },
+        timestamp: Date.now(),
+        hypothesisId: 'C',
+      }),
+    }).catch(() => {});
+    // #endregion
     if (!language) {
       return Response.json(
         { message: 'language is required' },
@@ -34,6 +55,34 @@ export async function POST(req: NextRequest) {
 
     return Response.json(response);
   } catch (error) {
+    // #region agent log
+    const err = error as {
+      constructor?: { name?: string };
+      statusCode?: number;
+      code?: string;
+      messageKey?: string;
+    };
+    fetch('http://127.0.0.1:7244/ingest/585dfbd9-11ed-4a7b-8723-960821f4c7ae', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Debug-Session-Id': 'eff39f',
+      },
+      body: JSON.stringify({
+        sessionId: 'eff39f',
+        location: 'placement-test/start/route.ts:catch',
+        message: 'placement start error',
+        data: {
+          name: err?.constructor?.name,
+          statusCode: err?.statusCode,
+          code: err?.code,
+          messageKey: err?.messageKey,
+        },
+        timestamp: Date.now(),
+        hypothesisId: 'E',
+      }),
+    }).catch(() => {});
+    // #endregion
     return apiErrorHandler(error, req);
   }
 }

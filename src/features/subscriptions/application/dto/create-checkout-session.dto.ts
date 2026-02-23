@@ -16,9 +16,19 @@ const strongPassword = z
     message: 'Include at least one special character (e.g. !@#$%)',
   });
 
+export const SubscribeInterval = z.enum(['month', 'annual']);
+export type SubscribeIntervalType = z.infer<typeof SubscribeInterval>;
+
 export const CreateCheckoutSessionSchema = z
   .object({
-    planType: z.string().min(1, 'Plan type is required'),
+    /** Plan type (product.type), e.g. "pro". From URL: ?plan=pro */
+    planType: z.string().min(1, 'Plan type is required').optional(),
+    /** Currency code from URL: ?currency=EUR. When set with planType+interval, resolves exact price. */
+    currency: z.string().min(1).max(5).optional(),
+    /** Billing interval from URL: ?interval=month | annual */
+    interval: SubscribeInterval.optional(),
+    /** Specific price ID (prices.id). When set, checkout uses this price. */
+    priceId: z.string().uuid().optional(),
     email: z
       .string()
       .min(1, 'Email is required')
@@ -65,6 +75,12 @@ export const CreateCheckoutSessionSchema = z
       return true;
     },
     { message: 'Passwords do not match', path: ['confirmPassword'] },
+  )
+  .refine(
+    (data) =>
+      data.priceId != null ||
+      (data.planType != null && data.planType.length > 0),
+    { message: 'Either planType or priceId is required', path: ['planType'] },
   )
   .superRefine((data, ctx) => {
     if (data.password != null && data.password.length > 0) {

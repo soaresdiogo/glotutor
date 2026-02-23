@@ -63,6 +63,7 @@ describe('RegisterUseCase', () => {
       email: 'new@example.com',
       passwordHash: 'hashed-password',
       name: 'New User',
+      locale: null,
     });
     expect(mockEmailVerificationRepo.create).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -73,6 +74,7 @@ describe('RegisterUseCase', () => {
     expect(mockEmailService.sendVerificationEmail).toHaveBeenCalledWith(
       'new@example.com',
       expect.stringContaining('/verify-email?token='),
+      undefined,
     );
     expect(mockConsentRecordRepo.create).toHaveBeenCalledTimes(2);
     expect(mockConsentRecordRepo.create).toHaveBeenNthCalledWith(

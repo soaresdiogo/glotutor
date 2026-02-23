@@ -18,6 +18,7 @@ export class UserRepository implements IUserRepository {
         passwordHash: data.passwordHash,
         name: data.name ?? null,
         tenantId: data.tenantId ?? null,
+        locale: data.locale ?? undefined,
       })
       .returning();
     if (!row) throw new Error('Failed to create user');

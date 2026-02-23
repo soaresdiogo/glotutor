@@ -1,0 +1,77 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  # ─── Job 1: Everything from pre-commit ───────────────────────────
+  lint:
+    name: 🔍 Lint & Code Quality
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint (lint-staged equivalent - full project)
+        run: npm run lint
+
+      - name: Lint Sonar
+        run: npm run lint:sonar
+
+  # ─── Job 2: Everything from pre-push ────────────────────────────
+  validate:
+    name: ✅ Type Check, Cycles, Copy & Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type check
+        run: npm run check-types
+
+      - name: Check circular dependencies
+        run: npm run check-cycles
+
+      - name: Validate copy
+        run: npm run validate-copy
+
+      - name: Run tests
+        run: npm run test
+
+  # ─── Job 3: Migration - only runs on main if everything passes ───
+  # Connects via SSH to the VPS and runs migrations inside the Docker container
+  # DATABASE_URL is already available inside the container via Coolify
+  migrate:
+    name: 🗄️ Run Database Migrations
+    runs-on: ubuntu-latest
+    needs: [lint, validate]                        # depends on both previous jobs
+    if: github.ref == 'refs/heads/main'            # only on main branch
+
+    steps:
+      - name: Run migrations via SSH inside Docker container
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: |
+            docker exec n48ocog800sksw0co4kssoow-093458758872 npx drizzle-kit migrate

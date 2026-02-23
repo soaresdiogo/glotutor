@@ -5,6 +5,8 @@ export type CreateUserInput = {
   passwordHash: string;
   name?: string | null;
   tenantId?: string | null;
+  /** UI/email language (e.g. "pt", "en-US"). Used for emails and app language. */
+  locale?: string | null;
 };
 
 export interface IUserRepository {

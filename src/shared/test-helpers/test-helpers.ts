@@ -15,6 +15,7 @@ export function createMockUser(
     mfaEnabled: false,
     status: 'pending',
     lastLoginAt: null,
+    locale: null,
     ...overrides,
   };
 }

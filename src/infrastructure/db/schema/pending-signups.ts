@@ -13,6 +13,8 @@ export const pendingSignups = pgTable(
     expiresAt: timestamp('expires_at').notNull(),
     /** When the user accepted the privacy policy (mandatory for signup). */
     privacyPolicyAcceptedAt: timestamp('privacy_policy_accepted_at'),
+    /** UI/email language chosen on landing (e.g. "pt", "en"). Used for emails and saved as user.locale. */
+    locale: varchar('locale', { length: 10 }),
     createdAt: timestamp('created_at').notNull().defaultNow(),
   },
   (t) => [
