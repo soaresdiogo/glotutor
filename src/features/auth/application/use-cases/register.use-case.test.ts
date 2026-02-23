@@ -93,6 +93,23 @@ describe('RegisterUseCase', () => {
         granted: true,
       }),
     );
+    expect(mockConsentRecordRepo.create).toHaveBeenCalledTimes(2);
+    expect(mockConsentRecordRepo.create).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        userId: 'new-id',
+        consentType: 'privacy_policy',
+        granted: true,
+      }),
+    );
+    expect(mockConsentRecordRepo.create).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        userId: 'new-id',
+        consentType: 'terms_of_use',
+        granted: true,
+      }),
+    );
   });
 
   it('should throw BadRequestError when email is already taken', async () => {

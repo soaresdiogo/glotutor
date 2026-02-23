@@ -1,5 +1,5 @@
-// Avoid "argument list too long" / SIGKILL (OOM) when passing too many files to eslint.
-const ESLINT_MAX_ARGS = 5;
+// Avoid "argument list too long" / SIGKILL when passing too many files to eslint.
+const ESLINT_MAX_ARGS = 10;
 
 function chunk(arr, size) {
   const chunks = [];

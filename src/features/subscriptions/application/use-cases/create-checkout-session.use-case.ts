@@ -177,6 +177,7 @@ export class CreateCheckoutSessionUseCase
     const stripePriceId = await this.resolveValidStripePriceId(plan);
 
     await this.validateConsentAndUpsertPendingSignup(dto, plan.planType);
+
     const customerId = await this.resolveCustomerId(dto, context.tenantId);
 
     const metadata: Record<string, string> = {
