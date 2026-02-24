@@ -69,6 +69,7 @@
   "certificate.completedSuccessfully": "den freien Kurs erfolgreich abgeschlossen hat",
   "certificate.courseNameTemplate": "{language} – Niveau {level} ({levelName})",
   "certificate.platformName": "GloTutor",
+  "certificate.platformTagline": "Sprachplattform mit KI",
   "certificate.skillsDescription": "mit der Entwicklung praktischer Fähigkeiten in Konversation, Aussprache, Hörverständnis und Lesen mit Echtzeit-KI-Feedback.",
   "certificate.workloadLabel": "Arbeitsaufwand",
   "certificate.completionDateLabel": "Abschlussdatum",
@@ -580,5 +581,10 @@
   "terms.section10Title": "10. Allgemeine Bestimmungen",
   "terms.section10Body": "Vollständige Vereinbarung. Duldung bedeutet keinen Verzicht.",
   "terms.section11Title": "11. Recht und Gerichtsstand",
-  "terms.section11Body": "Recht Portugals und DSGVO für EWR. Gerichtsstand Porto; für brasilianische Verbraucher Wohnsitzgericht."
+  "terms.section11Body": "Recht Portugals und DSGVO für EWR. Gerichtsstand Porto; für brasilianische Verbraucher Wohnsitzgericht.",
+  "seo.title": "GloTutor - Ihr privater Tutor rund um die Uhr.",
+  "seo.description": "Sprachen lernen mit moderner KI. Aussprache-Feedback, echte Gesprächspraxis mit einem KI-Tutor auf Muttersprachler-Niveau und authentische Inhalte. Starten Sie Ihre 7-tägige kostenlose Testversion.",
+  "seo.keywords": "Sprachen lernen, Online-Sprachkurs, KI für Sprachen, englische Aussprache, Konversationspraxis, Sprachgewandtheit, lernen wie Muttersprachler, GloTutor, Ausspracheübungen, Sprachlernplattform, Englisch mit KI",
+  "seo.ogDescription": "Sprachen lernen mit moderner KI. Aussprache-Feedback und echte Gesprächspraxis. Starten Sie Ihre 7-tägige kostenlose Testversion.",
+  "seo.twitterDescription": "Sprachen lernen mit moderner KI. Aussprache-Feedback und Konversationspraxis. Starten Sie Ihre 7-tägige kostenlose Testversion."
 }

@@ -121,6 +121,7 @@
   "certificate.completedSuccessfully": "concluiu com êxito o curso livre",
   "certificate.courseNameTemplate": "{language} – Nível {level} ({levelName})",
   "certificate.platformName": "GloTutor",
+  "certificate.platformTagline": "Plataforma de idiomas com IA",
   "certificate.skillsDescription": "desenvolvendo habilidades práticas de conversação, pronúncia, compreensão auditiva e leitura com feedback em tempo real por inteligência artificial.",
   "certificate.workloadLabel": "Carga horária",
   "certificate.completionDateLabel": "Data de conclusão",
@@ -580,5 +581,10 @@
   "terms.section10Title": "10. Disposições Gerais",
   "terms.section10Body": "Estes Termos constituem o acordo integral entre o Usuário e o GloTutor em relação ao uso da Plataforma e substituem acordos anteriores. A tolerância a descumprimentos não implica renúncia de direitos. A nulidade de qualquer disposição não afeta as demais, que permanecem em vigor.",
   "terms.section11Title": "11. Legislação e Foro",
-  "terms.section11Body": "Estes Termos são regidos pela lei de Portugal e pelo RGPD/GDPR para proteção de dados e para Usuários no EEE. Para Usuários fora do EEE aplica-se subsidiariamente a legislação brasileira. Para dirimir litígios, fica eleito o foro da Comarca do Porto, Portugal, para questões no EEE; para consumidores brasileiros, o foro do domicílio do consumidor pode ser competente nos termos do CDC."
+  "terms.section11Body": "Estes Termos são regidos pela lei de Portugal e pelo RGPD/GDPR para proteção de dados e para Usuários no EEE. Para Usuários fora do EEE aplica-se subsidiariamente a legislação brasileira. Para dirimir litígios, fica eleito o foro da Comarca do Porto, Portugal, para questões no EEE; para consumidores brasileiros, o foro do domicílio do consumidor pode ser competente nos termos do CDC.",
+  "seo.title": "GloTutor - Seu tutor particular 24h.",
+  "seo.description": "Aprenda idiomas com IA avançada. Feedback de pronúncia, prática de conversa real com tutor de IA em nível nativo e conteúdo autêntico. Comece seu teste grátis de 7 dias.",
+  "seo.keywords": "aprender idiomas, curso de idiomas online, IA para idiomas, pronúncia em inglês, prática de conversação, fluência, aprender como nativos, GloTutor, prática de pronúncia, plataforma de idiomas, inglês com IA",
+  "seo.ogDescription": "Aprenda idiomas com IA avançada. Feedback de pronúncia e prática de conversa real com tutor de IA. Comece seu teste grátis de 7 dias.",
+  "seo.twitterDescription": "Aprenda idiomas com IA avançada. Feedback de pronúncia e prática de conversa. Comece seu teste grátis de 7 dias."
 }

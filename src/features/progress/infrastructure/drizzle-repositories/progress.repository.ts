@@ -21,6 +21,7 @@ import { speakingTopics } from '@/infrastructure/db/schema/speaking-topics';
 import { studentPodcastProgress } from '@/infrastructure/db/schema/student-podcast-progress';
 import { studentProfiles } from '@/infrastructure/db/schema/student-profiles';
 import { texts } from '@/infrastructure/db/schema/texts';
+import { userLanguageProgress } from '@/infrastructure/db/schema/user-language-progress';
 import type { DbClient } from '@/infrastructure/db/types';
 
 function getStartOfWeek(): string {
@@ -36,19 +37,36 @@ function getStartOfWeek(): string {
 export class ProgressRepository implements IProgressRepository {
   constructor(private readonly db: DbClient) {}
 
-  async getProgressByUserId(userId: string): Promise<ProgressResultEntity> {
+  async getProgressByUserId(
+    userId: string,
+    language?: string,
+  ): Promise<ProgressResultEntity> {
     const startOfWeekStr = getStartOfWeek();
 
-    const profile = await this.db.query.studentProfiles.findFirst({
-      where: eq(studentProfiles.userId, userId),
-      columns: {
-        currentLevel: true,
-        streakDays: true,
-        totalPracticeMinutes: true,
-        totalWordsLearned: true,
-        lastPracticeDate: true,
-      },
-    });
+    const [profile, languageLevel] = await Promise.all([
+      this.db.query.studentProfiles.findFirst({
+        where: eq(studentProfiles.userId, userId),
+        columns: {
+          currentLevel: true,
+          streakDays: true,
+          totalPracticeMinutes: true,
+          totalWordsLearned: true,
+          lastPracticeDate: true,
+        },
+      }),
+      language
+        ? this.db.query.userLanguageProgress.findFirst({
+            where: and(
+              eq(userLanguageProgress.userId, userId),
+              eq(userLanguageProgress.language, language),
+            ),
+            columns: { currentLevel: true },
+          })
+        : Promise.resolve(null),
+    ]);
+
+    const effectiveCurrentLevel =
+      languageLevel?.currentLevel ?? profile?.currentLevel ?? 'A1';
 
     const [
       nativeLessonsRows,
@@ -210,15 +228,24 @@ export class ProgressRepository implements IProgressRepository {
           ).toISOString()
         : null;
 
-    const profileRow: ProfileRow | null = profile
-      ? {
-          currentLevel: profile.currentLevel,
-          streakDays: profile.streakDays,
-          totalPracticeMinutes: profile.totalPracticeMinutes,
-          totalWordsLearned: profile.totalWordsLearned,
-          lastPracticeDate: profile.lastPracticeDate,
-        }
-      : null;
+    let profileRow: ProfileRow | null = null;
+    if (profile) {
+      profileRow = {
+        currentLevel: effectiveCurrentLevel,
+        streakDays: profile.streakDays,
+        totalPracticeMinutes: profile.totalPracticeMinutes,
+        totalWordsLearned: profile.totalWordsLearned,
+        lastPracticeDate: profile.lastPracticeDate,
+      };
+    } else if (languageLevel) {
+      profileRow = {
+        currentLevel: effectiveCurrentLevel,
+        streakDays: 0,
+        totalPracticeMinutes: 0,
+        totalWordsLearned: 0,
+        lastPracticeDate: null,
+      };
+    }
 
     const overview = ProgressMapper.toOverview(
       profileRow,

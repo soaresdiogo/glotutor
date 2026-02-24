@@ -69,6 +69,7 @@
   "certificate.completedSuccessfully": "ha completato con successo il corso libero",
   "certificate.courseNameTemplate": "{language} – Livello {level} ({levelName})",
   "certificate.platformName": "GloTutor",
+  "certificate.platformTagline": "Piattaforma di lingue con IA",
   "certificate.skillsDescription": "sviluppando competenze pratiche di conversazione, pronuncia, comprensione orale e lettura con feedback in tempo reale tramite intelligenza artificiale.",
   "certificate.workloadLabel": "Carico orario",
   "certificate.completionDateLabel": "Data di completamento",
@@ -580,5 +581,10 @@
   "terms.section10Title": "10. Disposizioni generali",
   "terms.section10Body": "Accordo integrale. La tolleranza non costituisce rinuncia.",
   "terms.section11Title": "11. Legge e foro",
-  "terms.section11Body": "Legge del Portogallo e GDPR per lo SEE. Foro di Porto; per consumatori brasiliani, foro del domicilio."
+  "terms.section11Body": "Legge del Portogallo e GDPR per lo SEE. Foro di Porto; per consumatori brasiliani, foro del domicilio.",
+  "seo.title": "GloTutor - Il tuo tutor privato 24/7.",
+  "seo.description": "Impara le lingue con IA avanzata. Feedback sulla pronuncia, pratica conversazionale reale con un tutor IA di livello madrelingua e contenuti autentici. Inizia la tua prova gratuita di 7 giorni.",
+  "seo.keywords": "imparare le lingue, corso di lingue online, IA per le lingue, pronuncia inglese, pratica conversazionale, fluidità, imparare come i nativi, GloTutor, pratica di pronuncia, piattaforma di lingue, inglese con IA",
+  "seo.ogDescription": "Impara le lingue con IA avanzata. Feedback sulla pronuncia e pratica conversazionale reale. Inizia la tua prova gratuita di 7 giorni.",
+  "seo.twitterDescription": "Impara le lingue con IA avanzata. Feedback sulla pronuncia e pratica conversazionale. Inizia la tua prova gratuita di 7 giorni."
 }

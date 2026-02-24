@@ -18,8 +18,11 @@ export async function GET(req: NextRequest) {
       );
     }
 
+    const { searchParams } = new URL(req.url);
+    const language = searchParams.get('language') ?? undefined;
+
     const getProgressUseCase = makeGetProgressUseCase();
-    const result = await getProgressUseCase.execute(user.id);
+    const result = await getProgressUseCase.execute(user.id, language);
     const body = ProgressPresenter.toResponse(result);
 
     return Response.json(body);

@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';
 
 import { progressApi } from '@/client-api/progress.api';
+import { useLanguageContext } from '@/providers/language-provider';
 
 /**
  * Format an ISO date string for display (relative or absolute).
@@ -45,9 +46,10 @@ export function formatAccuracyPercent(accuracy: number): string {
 }
 
 export function useProgress() {
+  const { activeLanguage } = useLanguageContext();
   const query = useQuery({
-    queryKey: ['progress'],
-    queryFn: () => progressApi.get(),
+    queryKey: ['progress', activeLanguage],
+    queryFn: () => progressApi.get(activeLanguage ?? undefined),
   });
 
   const totalCompleted = useMemo(() => {
