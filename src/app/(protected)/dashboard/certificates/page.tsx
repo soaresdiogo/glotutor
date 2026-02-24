@@ -134,15 +134,9 @@ export default function CertificatesPage() {
       <h1 className="mb-2 text-2xl font-semibold text-(--text)">
         {t('dashboard.certificates.title')}
       </h1>
-      <p className="mb-4 text-(--text-muted)">
+      <p className="mb-8 text-(--text-muted)">
         {t('dashboard.certificates.subtitle')}
       </p>
-      <Link
-        href="/dashboard/certificates/preview"
-        className="mb-8 inline-block rounded-xl border-2 border-(--accent) bg-(--accent-soft) px-4 py-2 text-sm font-medium text-(--accent) transition hover:bg-(--accent-soft)/80"
-      >
-        {t('dashboard.certificates.previewCertificate')}
-      </Link>
 
       {isLoading ? (
         <p className="text-(--text-muted)">{t('common.loading')}</p>

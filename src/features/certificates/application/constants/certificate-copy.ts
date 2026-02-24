@@ -11,6 +11,7 @@ export type CertificateCopy = {
   completedSuccessfully: string;
   courseNameTemplate: string;
   platformName: string;
+  platformTagline: string;
   skillsDescription: string;
   workloadLabel: string;
   completionDateLabel: string;
@@ -28,6 +29,7 @@ const CERTIFICATE_KEYS: (keyof CertificateCopy)[] = [
   'completedSuccessfully',
   'courseNameTemplate',
   'platformName',
+  'platformTagline',
   'skillsDescription',
   'workloadLabel',
   'completionDateLabel',

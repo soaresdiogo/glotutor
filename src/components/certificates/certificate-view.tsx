@@ -81,30 +81,18 @@ export const CertificateView = forwardRef<
       className="certificate-paper bg-white shadow-2xl overflow-hidden text-slate-800"
       style={{ width: 900, maxWidth: '100%' }}
     >
-      <div className="h-2 w-full bg-gradient-to-r from-indigo-600 via-indigo-400 to-amber-500" />
+      <div className="h-2 w-full bg-linear-to-r from-indigo-600 via-indigo-400 to-amber-500" />
       <div className="px-12 py-10 md:px-16 md:py-12">
         <div className="flex items-start justify-between mb-8">
           <div className="flex items-center gap-2.5">
-            <div
-              className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded border-2 border-indigo-600 bg-slate-50 text-indigo-600 text-xs font-medium"
-              aria-hidden
-            >
-              Logo
-            </div>
-            <div>
-              <div
-                className="font-serif text-lg text-indigo-600"
-                style={{ fontFamily: 'var(--font-serif)' }}
-              >
-                glotutor<span className="text-amber-500">.</span>com
-              </div>
-              <div
-                className="text-[10px] text-slate-500"
-                style={{ fontFamily: 'var(--font-sans)' }}
-              >
-                Language platform with AI
-              </div>
-            </div>
+            <Image
+              src="/logo/default.svg"
+              alt="GloTutor"
+              width={140}
+              height={24}
+              className="h-8 w-auto max-w-[160px] object-contain object-left"
+              unoptimized
+            />
           </div>
           <div className="text-right">
             <span

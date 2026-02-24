@@ -19,5 +19,8 @@ export type CompletedSpeaking = CompletedSpeakingDto;
 export type ProgressResponse = ProgressResponseDto;
 
 export const progressApi = {
-  get: () => httpClient.get('progress').json<ProgressResponse>(),
+  get: (language?: string) =>
+    httpClient
+      .get('progress', language ? { searchParams: { language } } : undefined)
+      .json<ProgressResponse>(),
 };

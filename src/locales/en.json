@@ -69,6 +69,7 @@
   "certificate.completedSuccessfully": "has successfully completed the free course",
   "certificate.courseNameTemplate": "{language} – Level {level} ({levelName})",
   "certificate.platformName": "GloTutor",
+  "certificate.platformTagline": "Language platform with AI",
   "certificate.skillsDescription": "developing practical conversation, pronunciation, listening and reading skills with real-time AI feedback.",
   "certificate.workloadLabel": "Study time",
   "certificate.completionDateLabel": "Completion date",
@@ -580,5 +581,10 @@
   "terms.section10Title": "10. General Provisions",
   "terms.section10Body": "These Terms constitute the entire agreement between the User and GloTutor regarding the Platform and replace any prior agreements. Tolerance of any breach does not waive rights. If any provision is held invalid, the remaining provisions remain in full force.",
   "terms.section11Title": "11. Governing Law and Jurisdiction",
-  "terms.section11Body": "These Terms are governed by the law of Portugal and the GDPR for data protection and for Users in the EEA. For other Users, Brazilian law may apply subsidiarily. For the resolution of disputes, the courts of Porto, Portugal are elected for EEA-related matters; for Brazilian consumers, the consumer's domicile may be competent under the Consumer Defence Code."
+  "terms.section11Body": "These Terms are governed by the law of Portugal and the GDPR for data protection and for Users in the EEA. For other Users, Brazilian law may apply subsidiarily. For the resolution of disputes, the courts of Porto, Portugal are elected for EEA-related matters; for Brazilian consumers, the consumer's domicile may be competent under the Consumer Defence Code.",
+  "seo.title": "GloTutor - Your 24/7 private tutor.",
+  "seo.description": "Learn languages with advanced AI. Pronunciation feedback, real conversation practice with a native-level AI tutor, and authentic content. Start your 7-day free trial.",
+  "seo.keywords": "learn languages, online language course, AI for languages, English pronunciation, conversation practice, language fluency, learn like natives, GloTutor, pronunciation practice, language learning platform, English with AI",
+  "seo.ogDescription": "Learn languages with advanced AI. Pronunciation feedback, real conversation practice with a native-level AI tutor. Start your 7-day free trial.",
+  "seo.twitterDescription": "Learn languages with advanced AI. Pronunciation feedback, real conversation practice. Start your 7-day free trial."
 }

@@ -69,6 +69,7 @@
   "certificate.completedSuccessfully": "a réussi le cours libre",
   "certificate.courseNameTemplate": "{language} – Niveau {level} ({levelName})",
   "certificate.platformName": "GloTutor",
+  "certificate.platformTagline": "Plateforme de langues avec IA",
   "certificate.skillsDescription": "en développant des compétences pratiques de conversation, prononciation, compréhension orale et lecture avec retour en temps réel par intelligence artificielle.",
   "certificate.workloadLabel": "Charge horaire",
   "certificate.completionDateLabel": "Date de réussite",
@@ -580,5 +581,10 @@
   "terms.section10Title": "10. Dispositions générales",
   "terms.section10Body": "Accord intégral. La tolérance ne vaut pas renonciation.",
   "terms.section11Title": "11. Droit et juridiction",
-  "terms.section11Body": "Droit du Portugal et RGPD pour l'EEE. Tribunal de Porto ; pour les consommateurs brésiliens, tribunal du domicile."
+  "terms.section11Body": "Droit du Portugal et RGPD pour l'EEE. Tribunal de Porto ; pour les consommateurs brésiliens, tribunal du domicile.",
+  "seo.title": "GloTutor - Votre tuteur privé 24h/24.",
+  "seo.description": "Apprenez les langues avec une IA avancée. Retour sur la prononciation, pratique de conversation réelle avec un tuteur IA de niveau natif et contenu authentique. Commencez votre essai gratuit de 7 jours.",
+  "seo.keywords": "apprendre les langues, cours de langues en ligne, IA pour les langues, prononciation anglaise, pratique de conversation, fluidité, apprendre comme les natifs, GloTutor, pratique de prononciation, plateforme d'apprentissage, anglais avec IA",
+  "seo.ogDescription": "Apprenez les langues avec une IA avancée. Retour sur la prononciation et pratique de conversation réelle. Commencez votre essai gratuit de 7 jours.",
+  "seo.twitterDescription": "Apprenez les langues avec une IA avancée. Retour sur la prononciation et pratique de conversation. Commencez votre essai gratuit de 7 jours."
 }

@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useId } from 'react';
@@ -48,6 +49,7 @@ const NAV_CONTENT: NavItem[] = [
   },
 ];
 
+// TODO: Re-enable Study groups when feature is ready (dashboard.studyGroups)
 const NAV_COMMUNITY: NavItem[] = [
   {
     href: '/dashboard/leaderboard',
@@ -55,12 +57,7 @@ const NAV_COMMUNITY: NavItem[] = [
     labelKey: 'dashboard.leaderboard',
     disabled: true,
   },
-  {
-    href: '/dashboard/study-groups',
-    icon: '👥',
-    labelKey: 'dashboard.studyGroups',
-    disabled: true,
-  },
+  // { href: '/dashboard/study-groups', icon: '👥', labelKey: 'dashboard.studyGroups', disabled: true },
 ];
 
 type NavSectionProps = Readonly<{
@@ -222,20 +219,17 @@ export function Sidebar({ open, onClose }: SidebarProps) {
         <header className="border-b border-(--border) px-5 py-6">
           <Link
             href="/dashboard"
-            className="flex items-center gap-3 no-underline"
+            className="flex items-center no-underline"
             onClick={onClose}
           >
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-linear-to-br from-(--accent) to-(--cyan) text-xl">
-              🎓
-            </div>
-            <div>
-              <span className="text-lg font-medium text-(--text)">
-                glotutor.com
-              </span>
-              <p className="text-[11px] text-(--text-dim) tracking-wide">
-                {t('dashboard.tagline')}
-              </p>
-            </div>
+            <Image
+              src="/logo/inverted.svg"
+              alt="GloTutor"
+              width={120}
+              height={20}
+              className="h-8 w-auto max-w-[140px] object-contain object-left"
+              priority
+            />
           </Link>
         </header>
 
