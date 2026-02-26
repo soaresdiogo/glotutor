@@ -37,6 +37,24 @@ export function apiErrorHandler(
     );
   }
 
+  // ffmpeg missing in environment (e.g. production) → speech/reading audio conversion fails
+  if (
+    error instanceof Error &&
+    error.message.includes('ffmpeg') &&
+    error.message.includes('ENOENT')
+  ) {
+    console.error('Unhandled API error (ffmpeg missing):', error.message);
+    const locale = req ? getLocaleFromRequest(req) : 'en';
+    const message = translateApiMessage(
+      locale,
+      'errors.speechProcessingUnavailable',
+    );
+    return NextResponse.json(
+      { message, code: 'SPEECH_PROCESSING_UNAVAILABLE' },
+      { status: 503 },
+    );
+  }
+
   console.error('Unhandled API error:', error);
   const locale = req ? getLocaleFromRequest(req) : 'en';
   const message = translateApiMessage(locale, 'errors.internalServerError');

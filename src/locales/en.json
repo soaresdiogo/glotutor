@@ -253,6 +253,7 @@
   "reading.api.invalidPayload": "Invalid payload.",
   "errors.validationFailed": "Validation failed.",
   "errors.internalServerError": "Something went wrong. Please try again later.",
+  "errors.speechProcessingUnavailable": "Speech processing is temporarily unavailable. Please try again later.",
   "tenant.notFound": "No tenant configured for this domain.",
   "tenant.unavailable.title": "Service unavailable",
   "tenant.unavailable.description": "No tenant is configured for this domain. Please contact the administrator.",
