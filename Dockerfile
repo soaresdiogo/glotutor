@@ -12,7 +12,7 @@ RUN npm run build
 # Production stage (with ffmpeg for Prática de fala / Reading)
 FROM node:20-bookworm-slim AS runner
 
-RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg \
+RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg curl \
   && rm -rf /var/lib/apt/lists/*
 
 ENV NODE_ENV=production
@@ -26,4 +26,4 @@ COPY --from=builder /app/drizzle.config.ts ./
 COPY --from=builder /app/src ./src
 
 EXPOSE 3000
-CMD ["sh", "-c", "npx drizzle-kit migrate && next start"]
+CMD ["sh", "-c", "npx drizzle-kit migrate && npx next start"]
