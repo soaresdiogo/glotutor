@@ -253,6 +253,7 @@
   "reading.api.invalidPayload": "Dados inválidos.",
   "errors.validationFailed": "Falha na validação.",
   "errors.internalServerError": "Algo deu errado. Tente novamente mais tarde.",
+  "errors.speechProcessingUnavailable": "O processamento de fala está temporariamente indisponível. Tente novamente mais tarde.",
   "tenant.notFound": "Nenhum tenant configurado para este domínio.",
   "tenant.unavailable.title": "Serviço indisponível",
   "tenant.unavailable.description": "Nenhum tenant está configurado para este domínio. Entre em contato com o administrador.",
