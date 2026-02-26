@@ -253,6 +253,7 @@
   "reading.api.invalidPayload": "Ungültige Daten.",
   "errors.validationFailed": "Validierung fehlgeschlagen.",
   "errors.internalServerError": "Etwas ist schiefgelaufen. Bitte versuche es später erneut.",
+  "errors.speechProcessingUnavailable": "Die Spracherkennung ist vorübergehend nicht verfügbar. Bitte versuche es später erneut.",
   "tenant.notFound": "Kein Tenant für diese Domain konfiguriert.",
   "tenant.unavailable.title": "Dienst nicht verfügbar",
   "tenant.unavailable.description": "Für diese Domain ist kein Tenant konfiguriert. Bitte kontaktieren Sie den Administrator.",
